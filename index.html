@@ -56,6 +56,11 @@
     </script>
     <!-- Font Awesome -->
     <link href="assets/css/font-awesome.min.css" rel="stylesheet">
+    <!-- PWA支持 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2196F3">
+    <link rel="icon" href="assets/webfonts/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="assets/webfonts/favicon.ico">
     <!-- Chart.js -->
     <script src="assets/js/chart.umd.min.js"></script>
     <!-- Chart.js CDN fallback -->
@@ -13929,25 +13934,11 @@ function renderIndicatorPreview(indicators) {
         }
 
         // 页面加载完成后初始化应用
-        document.addEventListener('DOMContentLoaded', function() {
-            // 等待Chart.js加载完成后再初始化
-            function initializeWhenChartReady() {
-                if (typeof Chart !== 'undefined') {
-                    console.log('Chart.js is ready, initializing app...');
-                    initApp();
-                    // 确保配方页面可见后再初始化图表
-                    setTimeout(function() {
-                        console.log('Initializing charts after app init...');
-                        updateNutritionCharts();
-                    }, 500);
-                } else {
-                    console.log('Waiting for Chart.js to load...');
-                    setTimeout(initializeWhenChartReady, 100);
-                }
-            }
-            
-            initializeWhenChartReady();
-        });
+        // 从外部文件加载应用初始化代码
+        const script = document.createElement('script');
+        script.src = 'assets/js/app.js';
+        script.defer = true;
+        document.head.appendChild(script);
         
         // 额外的图表初始化函数
         function initCharts() {
@@ -14086,6 +14077,39 @@ function renderIndicatorPreview(indicators) {
                 console.error('Chart initialization error:', error);
             }
         }
+
+        // 注册Service Worker（PWA支持）
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(function(error) {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+
+        // Google Analytics
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'UA-XXXXXXXXX-X'); // 请替换为您的Google Analytics跟踪ID
+
+        // Sentry错误监控
+        if (typeof Sentry !== 'undefined') {
+            Sentry.init({
+                dsn: 'https://your-sentry-dsn@sentry.io/1234567', // 请替换为您的Sentry DSN
+                integrations: [new Sentry.BrowserTracing()],
+                tracesSampleRate: 1.0
+            });
+        }
     </script>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-XXXXXXXXX-X"></script> <!-- 请替换为您的Google Analytics跟踪ID -->
+    
+    <!-- Sentry错误监控 -->
+    <script src="https://browser.sentry-cdn.com/7.0.0/bundle.min.js"></script>
 </body>
 </html>
