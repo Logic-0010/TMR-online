@@ -4798,235 +4798,142 @@
                 unit: 'kg/d',
                 source: 'calculated', // 数据源：calculated表示需要计算
                 calculation: function(formula) {
-                    // 基于BCNRM（肉牛营养模型）的科学计算方法，优化为预测最大可能日增重
-                    const neg = formula.nutrients.neg;
-                    const cp = formula.nutrients.cp;
-                    const dm = formula.nutrients.dm;
-                    const starch = formula.nutrients.starch;
-                    const ee = formula.nutrients.ee;
-                    const ndf = formula.nutrients.ndf || 40;
-                    const adf = formula.nutrients.adf || 25;
-                    const ca = formula.nutrients.ca || 0.5;
-                    const p = formula.nutrients.p || 0.3;
-                    const rdp = formula.nutrients.rdp || (cp * 0.65);
-                    const udp = formula.nutrients.udp || (cp * 0.35);
-                    const tdn = formula.nutrients.tdn || 65;
-                    const me = formula.nutrients.me || 2.5;
-                    const nem = formula.nutrients.nem || 1.7;
-                    const pendf = formula.nutrients.pendf || 15;
-                    
-                    // 获取体重和目标日增重
-                    let bodyWeight;
-                    const stage = document.getElementById('cattle-stage').value;
-                    const dailyGainSelect = document.getElementById('daily-gain');
-                    const targetGain = dailyGainSelect ? parseFloat(dailyGainSelect.value) : 1.5;
-                    
-                    if (stage === 'custom') {
-                        bodyWeight = parseInt(document.getElementById('custom-weight').value) || 400;
-                    } else {
-                        bodyWeight = parseInt(stage.replace('w', ''));
-                    }
-                    
-                    // 计算干物质采食量 (kg/d)
-                    let dmi;
-                    if (currentFormula.ingredients.length > 0) {
-                        // 使用当前配方的实际干物质采食量
-                        dmi = calculateCurrentFormulaDMI();
-                    } else {
-                        // 使用估计的干物质采食量
-                        dmi = calculateDMI(bodyWeight);
-                    }
-                    
-                    // 生成营养标准（基于当前体重）
-                    const nutritionStandard = generateNutritionStandard(bodyWeight, targetGain);
-                    
-                    // 计算维持净能需求 (MJ/d) - BCNRM模型
-                    const nemMaintenance = 0.322 * Math.pow(bodyWeight, 0.75);
-                    
-                    // 计算实际可用于增重的净能
-                    const actualNegIntake = neg * dmi;
-                    const availableNeg = actualNegIntake - nemMaintenance;
-                    
-                    // 计算代谢蛋白 (MP) - BCNRM模型
-                    const rdpIntake = (rdp / 100) * (cp / 100) * dmi * 1000; // g/d
-                    const udpIntake = (udp / 100) * (cp / 100) * dmi * 1000; // g/d
-                    const microbialProtein = Math.min(rdpIntake * 0.9, availableNeg * 14); // 基于能量和RDP的微生物蛋白合成（调整系数以提高准确性）
-                    const mpIntake = microbialProtein + udpIntake * 0.9; // 代谢蛋白摄入量（调整系数以提高准确性）
-                    
-                    // 计算维持代谢蛋白需求 (g/d) - BCNRM模型
-                    const mpMaintenance = 3.1 * Math.pow(bodyWeight, 0.75);
-                    
-                    // 计算可用于生长的代谢蛋白
-                    const availableMP = Math.max(0, mpIntake - mpMaintenance);
-                    
-                    // 计算营养浓度
-                    const energyDensity = neg / 4.184; // Mcal/kg
-                    const proteinDensity = cp;
-                    const tdnDensity = tdn;
-                    const meDensity = me;
-                    
-                    // 计算原料物理特性影响
-                    const fiberDigestibility = Math.max(40, 85 - (ndf - 30) * 0.8 - (adf - 15) * 0.5);
-                    const fiberEffect = (fiberDigestibility - 65) * 0.005;
-                    
-                    // 计算有效纤维影响
-                    const pendfEffect = Math.max(-0.1, Math.min(0.1, (pendf - 15) * 0.005));
-                    
-                    // 计算营养平衡影响
-                    const caPRatio = p > 0 ? ca / p : 0;
-                    const balanceEffect = Math.max(-0.1, Math.min(0.1, (caPRatio - 1.5) * 0.05));
-                    
-                    // 计算蛋白质降解率影响
-                    const rdpRatio = cp > 0 ? rdp / cp : 0;
-                    const proteinDegradationEffect = Math.max(-0.1, Math.min(0.1, (rdpRatio - 0.65) * 0.2));
-                    
-                    // 计算瘤胃氨能平衡影响
-                    const rneb = calculateRNEB(formula.nutrients, dmi);
-                    const rnebEffect = Math.max(-0.1, Math.min(0.1, (rneb - 0.18) * 0.5));
-                    
-                    // 计算营养限制因子 - BCNRM模型
-                    // 能量限制因子
-                    const energyRequirement = nemMaintenance + targetGain * 20.92; // 基于日增重的能量需求
-                    const energyLimitFactor = Math.min(1.1, actualNegIntake / energyRequirement); // 稍微放宽限制，允许超过需求的能量被利用
-                    
-                    // 蛋白质限制因子 - 基于代谢蛋白
-                    const mpRequirement = mpMaintenance + targetGain * 200; // 基于日增重的代谢蛋白需求
-                    const proteinLimitFactor = Math.min(1.1, mpIntake / mpRequirement); // 稍微放宽限制，允许超过需求的蛋白质被利用
-                    
-                    // 纤维限制因子
-                    const fiberLimitFactor = Math.min(1.0, Math.max(0.5, 1 - (ndf - 40) * 0.01));
-                    
-                    // 综合限制因子
-                    const limitingFactor = Math.min(energyLimitFactor, proteinLimitFactor, fiberLimitFactor);
-                    
-                    // 计算主要营养成分贡献 - BCNRM模型
-                    const baseGain = 0.1;
-                    
-                    // 净能贡献 - 基于实际能量浓度和采食量
-                    const negContribution = Math.max(0, availableNeg * 0.15); // 调整系数以提高准确性
-                    
-                    // 代谢蛋白贡献 - 基于实际代谢蛋白浓度和采食量
-                    const mpContribution = Math.max(0, availableMP * 0.0012); // 调整系数以提高准确性
-                    
-                    // 干物质贡献
-                    const dmContribution = (dm - 65) * 0.008;
-                    
-                    // 淀粉贡献
-                    const starchContribution = Math.min(0.8, (starch - 20) * 0.02);
-                    
-                    // 脂肪贡献
-                    const eeContribution = Math.min(0.5, ee * 0.1);
-                    
-                    // TDN贡献
-                    const tdnContribution = Math.max(0, (tdn - 60) * 0.01);
-                    
-                    // 代谢能贡献
-                    const meContribution = Math.max(0, (me - 2.0) * 0.2);
-                    
-                    // 体重影响因子（基于生长曲线模型 - Gompertz模型）
-                    let weightFactor;
-                    if (bodyWeight < 250) {
-                        weightFactor = 1.35; // 小牛生长潜力大
-                    } else if (bodyWeight < 350) {
-                        weightFactor = 1.25;
-                    } else if (bodyWeight < 450) {
-                        weightFactor = 1.1;
-                    } else if (bodyWeight < 550) {
-                        weightFactor = 0.95;
-                    } else if (bodyWeight < 650) {
-                        weightFactor = 0.85;
-                    } else {
-                        weightFactor = 0.75; // 大牛生长潜力显著下降
-                    }
-                    
-                    // 体重阶段特异性影响
-                    let stageSpecificFactor = 1.0;
-                    if (bodyWeight < 300) {
-                        // 犊牛阶段：需要更多蛋白质
-                        stageSpecificFactor *= (cp > 16) ? 1.1 : 0.9;
-                    } else if (bodyWeight < 500) {
-                        // 育成牛阶段：需要更多能量
-                        stageSpecificFactor *= (neg > 7) ? 1.1 : 0.9;
-                    } else {
-                        // 育肥牛阶段：需要平衡的营养
-                        stageSpecificFactor *= (caPRatio > 1.2 && caPRatio < 2.5) ? 1.1 : 0.9;
-                    }
-                    
-                    // 营养利用效率影响 - BCNRM模型
-                    const efficiencyFactor = 0.8 + 
-                                            (fiberDigestibility - 65) * 0.003 + 
-                                            proteinDegradationEffect +
-                                            pendfEffect +
-                                            rnebEffect +
-                                            (mpIntake / mpRequirement - 1) * 0.1; // 代谢蛋白平衡影响
-                    
-                    // 综合计算最大可能日增重 - BCNRM模型
-                    const totalGain = baseGain + 
-                                     (negContribution + 
-                                      mpContribution + 
-                                      dmContribution + 
-                                      starchContribution + 
-                                      eeContribution + 
-                                      tdnContribution +
-                                      meContribution +
-                                      fiberEffect + 
-                                      balanceEffect) * 
-                                     weightFactor * 
-                                     stageSpecificFactor * 
-                                     efficiencyFactor * 
-                                     limitingFactor;
-                    
-                    // 限制合理范围 - 根据体重阶段调整范围
-                    let minGain, maxGain;
-                    if (bodyWeight < 300) {
-                        minGain = 0.3;
-                        maxGain = 2.8;
-                    } else if (bodyWeight < 400) {
-                        minGain = 0.4;
-                        maxGain = 3.0;
-                    } else if (bodyWeight < 500) {
-                        minGain = 0.5;
-                        maxGain = 2.8;
-                    } else if (bodyWeight < 600) {
-                        minGain = 0.4;
-                        maxGain = 2.5;
-                    } else {
-                        minGain = 0.3;
-                        maxGain = 2.0;
-                    }
-                    
-                    // 确保计算结果合理
-                    const result = Math.max(minGain, Math.min(maxGain, totalGain));
-                    
-                    // 调试：如果结果接近最小值，输出计算过程
-                    if (result === minGain) {
-                        console.log('平均日增重预测接近最小值:', result);
+                    try {
+                        // 基于NRC 2016和BCNRM模型的标准公式计算预测日增重
+                        console.log('=== 开始计算平均日增重 ===');
+                        console.log('输入配方:', formula);
+                        
+                        // 获取营养指标，提供合理的默认值
+                        const nutrients = (formula && formula.nutrients) || {};
+                        const neg = nutrients.neg || 5.5; // 默认增重净能
+                        const cp = nutrients.cp || 16; // 默认粗蛋白
+                        const rdp = nutrients.rdp || (cp * 0.65); // 默认瘤胃可降解蛋白
+                        const udp = nutrients.udp || (cp * 0.35); // 默认过瘤胃蛋白
+                        
                         console.log('计算参数:', {
-                            baseGain,
-                            negContribution,
-                            mpContribution,
-                            dmContribution,
-                            starchContribution,
-                            eeContribution,
-                            tdnContribution,
-                            meContribution,
-                            fiberEffect,
-                            balanceEffect,
-                            weightFactor,
-                            stageSpecificFactor,
-                            efficiencyFactor,
-                            limitingFactor,
-                            totalGain,
-                            minGain,
-                            maxGain,
-                            neg,
-                            cp,
-                            dmi,
-                            bodyWeight
+                            neg, cp, rdp, udp
                         });
+                        
+                        // 获取体重
+                        let bodyWeight = 400; // 默认体重
+                        const stageElement = DOMUtils.getElement('cattle-stage');
+                        
+                        if (stageElement) {
+                            const stage = stageElement.value;
+                            
+                            if (stage === 'custom') {
+                                const customWeightElement = DOMUtils.getElement('custom-weight');
+                                bodyWeight = customWeightElement ? parseInt(customWeightElement.value) || 400 : 400;
+                            } else {
+                                bodyWeight = parseInt(stage.replace('w', '')) || 400;
+                            }
+                        }
+                        
+                        console.log('体重:', bodyWeight);
+                        
+                        // 计算干物质采食量 (kg/d)
+                        // 无论是否有原料，都使用基于体重的估计采食量，因为配方重量不一定等于动物实际采食量
+                        let dmi = calculateDMI(bodyWeight);
+                        console.log('干物质采食量:', dmi);
+                        
+                        // 1. 计算维持净能需求 (MJ/d) - NRC 2016模型
+                        const nemMaintenance = 0.322 * Math.pow(bodyWeight, 0.75);
+                        console.log('维持净能需求:', nemMaintenance);
+                        
+                        // 2. 计算实际净能摄入
+                        const actualNegIntake = neg * dmi;
+                        console.log('实际净能摄入:', actualNegIntake);
+                        
+                        // 3. 计算可用于增重的净能
+                        const availableNeg = Math.max(0, actualNegIntake - nemMaintenance);
+                        console.log('可用于增重的净能:', availableNeg);
+                        
+                        // 4. 计算代谢蛋白 (MP) - BCNRM模型
+                        // 正确计算RDP和UDP摄入量
+                        const cpIntake = (cp / 100) * dmi * 1000; // 粗蛋白摄入量 (g/d)
+                        const rdpIntake = (rdp / 100) * cpIntake; // 瘤胃可降解蛋白摄入量 (g/d)
+                        const udpIntake = (udp / 100) * cpIntake; // 过瘤胃蛋白摄入量 (g/d)
+                        console.log('粗蛋白摄入量:', cpIntake);
+                        console.log('瘤胃可降解蛋白摄入量:', rdpIntake);
+                        console.log('过瘤胃蛋白摄入量:', udpIntake);
+                        
+                        // 微生物蛋白合成（基于RDP）- BCNRM标准公式
+                        // 微生物蛋白 = RDP摄入量 * 0.85（微生物利用效率）
+                        const microbialProtein = rdpIntake * 0.85; // BCNRM标准系数
+                        console.log('微生物蛋白合成:', microbialProtein);
+                        
+                        // 代谢蛋白摄入量
+                        const mpIntake = microbialProtein + udpIntake * 0.85; // BCNRM标准消化率
+                        console.log('代谢蛋白摄入量:', mpIntake);
+                        
+                        // 5. 计算维持代谢蛋白需求 (g/d) - NRC 2016模型
+                        const mpMaintenance = 3.1 * Math.pow(bodyWeight, 0.75);
+                        console.log('维持代谢蛋白需求:', mpMaintenance);
+                        
+                        // 6. 计算可用于生长的代谢蛋白
+                        const availableMP = Math.max(0, mpIntake - mpMaintenance);
+                        console.log('可用于生长的代谢蛋白:', availableMP);
+                        
+                        // 7. 使用NRC 2016模型计算日增重
+                        // 公式：ADG = (availableNeg) / (2.092 + 0.0251 * bodyWeight)
+                        // 这是NRC 2016中用于计算日增重的标准公式
+                        let adgFromEnergy = availableNeg / (2.092 + 0.0251 * bodyWeight);
+                        console.log('基于能量的日增重:', adgFromEnergy);
+                        
+                        // 8. 使用BCNRM模型计算基于蛋白质的日增重
+                        // 公式：ADG = availableMP / (200 + 0.2 * bodyWeight)
+                        // 这是BCNRM中用于计算基于蛋白质的日增重的公式
+                        let adgFromProtein = availableMP / (200 + 0.2 * bodyWeight);
+                        console.log('基于蛋白质的日增重:', adgFromProtein);
+                        
+                        // 9. 确保计算结果不为0
+                        if (adgFromEnergy < 0.1) {
+                            adgFromEnergy = 0.1; // 设置最小日增重为0.1 kg/d
+                        }
+                        if (adgFromProtein < 0.1) {
+                            adgFromProtein = 0.1; // 设置最小日增重为0.1 kg/d
+                        }
+                        console.log('调整后的基于能量的日增重:', adgFromEnergy);
+                        console.log('调整后的基于蛋白质的日增重:', adgFromProtein);
+                        
+                        // 10. 取能量和蛋白质限制中的最小值作为最终日增重
+                        // 这是NRC和BCNRM模型中常用的方法，因为日增重受限于能量或蛋白质中的短板
+                        let result = Math.min(adgFromEnergy, adgFromProtein);
+                        
+                        // 11. 确保结果是有效的数字
+                        if (isNaN(result) || !isFinite(result)) {
+                            console.warn('平均日增重计算结果无效，使用默认值: 1.0');
+                            result = 1.0;
+                        }
+                        
+                        // 12. 确保结果非负
+                        result = Math.max(0, result);
+                        
+                        // 调试：输出计算过程和结果
+                        console.log('计算过程:', {
+                            bodyWeight,
+                            dmi,
+                            nemMaintenance,
+                            actualNegIntake,
+                            availableNeg,
+                            rdpIntake,
+                            udpIntake,
+                            microbialProtein,
+                            mpIntake,
+                            mpMaintenance,
+                            availableMP,
+                            adgFromEnergy,
+                            adgFromProtein,
+                            result
+                        });
+                        console.log('计算结果:', result);
+                        console.log('=== 平均日增重计算结束 ===');
+                        
+                        return result;
+                    } catch (error) {
+                        console.error('计算平均日增重时出错:', error);
+                        return 1.0; // 出错时返回默认值
                     }
-                    
-                    return result;
                 },
                 editable: false, // 只能通过计算获得
                 color: '#2196F3'
@@ -5145,115 +5052,23 @@
                 unit: 'kg/d',
                 source: 'calculated',
                 calculation: function(formula) {
-                    // 基于BCNRM（肉牛营养模型）的科学计算方法
-                    let bodyWeight;
-                    const stage = document.getElementById('cattle-stage').value;
-                    const dailyGainSelect = document.getElementById('daily-gain');
-                    const targetGain = dailyGainSelect ? parseFloat(dailyGainSelect.value) : 1.5;
-                    
-                    if (stage === 'custom') {
-                        // 自定义体重
-                        bodyWeight = parseInt(document.getElementById('custom-weight').value) || 400;
+                    // 干物质采食量等于当前配方干物质采食量
+                    if (currentFormula.ingredients.length > 0) {
+                        // 使用当前配方的实际干物质采食量
+                        return calculateCurrentFormulaDMI();
                     } else {
-                        // 预定义体重阶段
-                        bodyWeight = parseInt(stage.replace('w', ''));
+                        // 没有原料时，基于体重计算估计值
+                        let bodyWeight;
+                        const stage = document.getElementById('cattle-stage').value;
+                        
+                        if (stage === 'custom') {
+                            bodyWeight = parseInt(document.getElementById('custom-weight').value) || 400;
+                        } else {
+                            bodyWeight = parseInt(stage.replace('w', ''));
+                        }
+                        
+                        return calculateDMI(bodyWeight);
                     }
-                    
-                    const dm = formula.nutrients.dm;
-                    const cp = formula.nutrients.cp;
-                    const neg = formula.nutrients.neg;
-                    const ndf = formula.nutrients.ndf || 40;
-                    const adf = formula.nutrients.adf || 25;
-                    const ee = formula.nutrients.ee || 4;
-                    const starch = formula.nutrients.starch || 25;
-                    const rdp = formula.nutrients.rdp || (cp * 0.65);
-                    const udp = formula.nutrients.udp || (cp * 0.35);
-                    const pendf = formula.nutrients.pendf || 15;
-                    
-                    // 计算维持净能需求 (MJ/d) - BCNRM模型
-                    const nemMaintenance = 0.322 * Math.pow(bodyWeight, 0.75);
-                    
-                    // 计算增重净能需求 (MJ/d) - BCNRM模型
-                    const negRequirement = targetGain * 20.92;
-                    
-                    // 计算总能量需求
-                    const totalEnergyRequirement = nemMaintenance + negRequirement;
-                    
-                    // 计算能量密度 (MJ/kgDM)
-                    const energyDensity = neg;
-                    
-                    // 基于能量需求的采食量
-                    const energyBasedIntake = totalEnergyRequirement / energyDensity;
-                    
-                    // 计算维持代谢蛋白需求 (g/d) - BCNRM模型
-                    const mpMaintenance = 3.1 * Math.pow(bodyWeight, 0.75);
-                    
-                    // 计算增重代谢蛋白需求 (g/d) - BCNRM模型
-                    const mpGainRequirement = targetGain * 200;
-                    
-                    // 计算总代谢蛋白需求
-                    const totalMPRequirement = mpMaintenance + mpGainRequirement;
-                    
-                    // 计算代谢蛋白浓度 (g/kgDM)
-                    const rdpIntakePerKg = (rdp / 100) * (cp / 100) * 1000; // g/kgDM
-                    const udpIntakePerKg = (udp / 100) * (cp / 100) * 1000; // g/kgDM
-                    const microbialProteinPerKg = Math.min(rdpIntakePerKg * 0.9, energyDensity * 14); // 基于能量和RDP的微生物蛋白合成（调整系数以提高准确性）
-                    const mpConcentration = microbialProteinPerKg + udpIntakePerKg * 0.9; // 代谢蛋白浓度（调整系数以提高准确性）
-                    
-                    // 基于代谢蛋白需求的采食量
-                    const proteinBasedIntake = totalMPRequirement / mpConcentration;
-                    
-                    // 计算瘤胃填充限制 - BCNRM模型
-                    // 基于NDF的填充限制
-                    const ndfFillLimit = bodyWeight * 0.012; // 最大NDF采食量
-                    const actualNdfIntake = (ndf / 100) * energyBasedIntake;
-                    const fillLimitFactor = Math.min(1.0, ndfFillLimit / actualNdfIntake);
-                    
-                    // 计算原料物理特性影响（纤维含量影响采食量）
-                    const fiberDigestibility = Math.max(40, 85 - (ndf - 30) * 0.8 - (adf - 15) * 0.5);
-                    const digestibilityEffect = Math.max(-0.15, (fiberDigestibility - 65) * 0.0015);
-                    
-                    // 计算有效纤维影响
-                    const pendfEffect = Math.max(-0.1, Math.min(0.1, (pendf - 15) * 0.005));
-                    
-                    // 计算营养浓度影响
-                    const energyEffect = Math.max(-0.15, (energyDensity - 6) * 0.01);
-                    const proteinEffect = Math.max(-0.1, (cp - 16) * 0.0015);
-                    const fatEffect = Math.min(0.15, ee * 0.015);
-                    const starchEffect = Math.min(0.1, (starch - 25) * 0.002);
-                    
-                    // 基础采食量（基于体重和日增重的科学公式）
-                    const baseIntake = 0.02 * bodyWeight + 5.5 * targetGain;
-                    
-                    // 干物质含量影响
-                    const dmAdjustment = (dm - 65) * 0.0012 * baseIntake;
-                    
-                    // 目标日增重影响（日增重越高，采食量越大）
-                    const gainEffect = (targetGain - 1.5) * 0.25;
-                    
-                    // 体重影响因子（不同体重阶段采食量不同）
-                    let weightFactor;
-                    if (bodyWeight < 300) {
-                        weightFactor = 1.2; // 小牛采食量相对较大
-                    } else if (bodyWeight > 600) {
-                        weightFactor = 0.8; // 大牛采食量相对较小
-                    } else {
-                        weightFactor = 1.0;
-                    }
-                    
-                    // 综合计算 - BCNRM模型
-                    // 取能量和蛋白质需求的最大值
-                    const nutrientBasedIntake = Math.max(energyBasedIntake, proteinBasedIntake);
-                    
-                    // 应用填充限制
-                    const fillAdjustedIntake = nutrientBasedIntake * fillLimitFactor;
-                    
-                    // 应用其他调整因子
-                    const totalAdjustment = dmAdjustment + gainEffect + energyEffect + proteinEffect + fatEffect + starchEffect + digestibilityEffect + pendfEffect;
-                    const finalIntake = (fillAdjustedIntake + totalAdjustment) * weightFactor;
-                    
-                    // 限制合理范围
-                    return Math.max(bodyWeight * 0.015, Math.min(bodyWeight * 0.035, finalIntake));
                 },
                 editable: false, // 只能通过计算获得
                 color: '#2196F3'
@@ -6257,16 +6072,30 @@
                     updatedIndicators[indicator.id] = value;
                 } else if (indicator.source === 'calculated') {
                     // 需要计算的指标
-                    const value = indicator.calculation(formula);
-                    // 确保value是数字类型
-                    if (typeof value === 'number') {
-                        updatedIndicators[indicator.id] = parseFloat(value.toFixed(2));
-                    } else if (typeof value === 'string' && !isNaN(parseFloat(value))) {
-                        // 如果是数字字符串，转换为数字
-                        updatedIndicators[indicator.id] = parseFloat(value);
-                    } else {
-                        // 否则使用默认值
-                        updatedIndicators[indicator.id] = 0;
+                    try {
+                        const value = indicator.calculation(formula);
+                        // 确保value是数字类型
+                        if (typeof value === 'number' && !isNaN(value) && isFinite(value)) {
+                            updatedIndicators[indicator.id] = parseFloat(value.toFixed(2));
+                        } else if (typeof value === 'string' && !isNaN(parseFloat(value))) {
+                            // 如果是数字字符串，转换为数字
+                            updatedIndicators[indicator.id] = parseFloat(value);
+                        } else {
+                            // 否则使用默认值
+                            if (indicator.id === 'avg_daily_gain') {
+                                updatedIndicators[indicator.id] = 1.0; // 平均日增重默认值为1.0
+                            } else {
+                                updatedIndicators[indicator.id] = 0;
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`计算指标 ${indicator.id} 时出错:`, error);
+                        // 出错时使用默认值
+                        if (indicator.id === 'avg_daily_gain') {
+                            updatedIndicators[indicator.id] = 1.0; // 平均日增重默认值为1.0
+                        } else {
+                            updatedIndicators[indicator.id] = 0;
+                        }
                     }
                 } else if (indicator.source === 'manual') {
                     // 手动输入的指标，保持原值或使用默认值
@@ -6285,15 +6114,18 @@
          * 当配方更新时，同步更新指标
          */
         function syncIndicatorsWithFormula() {
-            if (currentFormula.ingredients.length > 0) {
-                // 更新配方的指标数据
-                currentFormula.indicators = updateIndicatorsFromFormula(currentFormula);
-                
-                // 如果当前在指标管理页面，则更新指标显示
-                const pageIndicators = document.getElementById('page-indicators');
-                if (pageIndicators && !pageIndicators.classList.contains('hidden')) {
-                    renderIndicators(currentFormula.indicators);
-                }
+            // 确保营养指标已初始化
+            if (!currentFormula.nutrients) {
+                calculateFormulaNutrients();
+            }
+            
+            // 更新配方的指标数据
+            currentFormula.indicators = updateIndicatorsFromFormula(currentFormula);
+            
+            // 如果当前在指标管理页面，则更新指标显示
+            const pageIndicators = document.getElementById('page-indicators');
+            if (pageIndicators && !pageIndicators.classList.contains('hidden')) {
+                renderIndicators(currentFormula.indicators);
             }
         }
 
@@ -7172,7 +7004,29 @@
          */
         function calculateFormulaNutrients() {
             try {
-                if (currentFormula.ingredients.length === 0) return;
+                if (currentFormula.ingredients.length === 0) {
+                    // 没有原料时，初始化默认营养指标
+                    currentFormula.nutrients = {
+                        dm: 70, // 默认干物质含量
+                        tdn: 65, // 默认TDN
+                        cp: 15, // 默认粗蛋白
+                        rdp: 65, // 默认瘤胃可降解蛋白
+                        udp: 35, // 默认非降解蛋白
+                        me: 2.5, // 默认代谢能
+                        nem: 1.7, // 默认维持净能
+                        neg: 1.0, // 默认增重净能
+                        starch: 25, // 默认淀粉
+                        ee: 4, // 默认粗脂肪
+                        ndf: 40, // 默认中性洗涤纤维
+                        adf: 25, // 默认酸性洗涤纤维
+                        pendf: 15, // 默认有效纤维
+                        ca: 0.5, // 默认钙
+                        p: 0.3, // 默认磷
+                        caPRatio: 1.67, // 默认钙磷比
+                        rdpCPRatio: 0.65 // 默认RDP/CP比例
+                    };
+                    return;
+                }
                 
                 Logger.info('Calculating formula nutrients', 'calculateFormulaNutrients');
                 Logger.debug(`Current ingredients: ${currentFormula.ingredients.length} items`, 'calculateFormulaNutrients');
@@ -7186,90 +7040,90 @@
                 const totalWeight = calculateTotalWeight();
                 Logger.debug(`Total weight: ${totalWeight}`, 'calculateFormulaNutrients');
             
-            // 初始化营养指标
-            const nutrients = {
-                dm: 0,
-                tdn: 0,
-                cp: 0,
-                rdp: 0,
-                udp: 0, // 非降解蛋白
-                me: 0,
-                nem: 0,
-                neg: 0,
-                starch: 0,
-                ee: 0,
-                ndf: 0,
-                adf: 0,
-                pendf: 0,
-                ca: 0,
-                p: 0,
-                caPRatio: 0, // 钙磷比
-                rdpCPRatio: 0 // RDP/CP比例
-            };
-            
-            // 计算加权平均（使用更高精度的计算）
-            currentFormula.ingredients.forEach(ingredient => {
-                const ratio = ingredient.weight / totalWeight;
+                // 初始化营养指标
+                const nutrients = {
+                    dm: 0,
+                    tdn: 0,
+                    cp: 0,
+                    rdp: 0,
+                    udp: 0, // 非降解蛋白
+                    me: 0,
+                    nem: 0,
+                    neg: 0,
+                    starch: 0,
+                    ee: 0,
+                    ndf: 0,
+                    adf: 0,
+                    pendf: 0,
+                    ca: 0,
+                    p: 0,
+                    caPRatio: 0, // 钙磷比
+                    rdpCPRatio: 0 // RDP/CP比例
+                };
                 
-                // 干物质含量
-                nutrients.dm += ingredient.nutrients.dm * ratio;
+                // 计算加权平均（使用更高精度的计算）
+                currentFormula.ingredients.forEach(ingredient => {
+                    const ratio = ingredient.weight / totalWeight;
+                    
+                    // 干物质含量
+                    nutrients.dm += ingredient.nutrients.dm * ratio;
+                    
+                    // 计算TDN，如果原料没有提供TDN值，则根据其他营养成分计算
+                    // 基于BCNRM模型的TDN计算方法，使用更准确的系数
+                    const ingredientTdn = ingredient.nutrients.tdn || 
+                        (ingredient.nutrients.cp * 0.92 + // 蛋白质消化率调整（BCNRM标准）
+                         ingredient.nutrients.ee * 2.25 + // 脂肪消化率调整（BCNRM标准）
+                         ingredient.nutrients.starch * 0.98 + // 淀粉消化率调整（BCNRM标准）
+                         (ingredient.nutrients.ndf - ingredient.nutrients.adf) * 0.5 + // 半纤维素消化率调整（BCNRM标准）
+                         ingredient.nutrients.adf * 0.15); // 纤维素消化率调整（BCNRM标准）
+                    nutrients.tdn += ingredientTdn * ratio;
+                    
+                    // 粗蛋白
+                    nutrients.cp += ingredient.nutrients.cp * ratio;
+                    
+                    // 计算RDP和UDP，如果原料没有提供RDP值，则使用粗蛋白的65%
+                    // 基于BCNRM模型的蛋白质计算方法
+                    const ingredientRdp = ingredient.nutrients.rdp || (ingredient.nutrients.cp * 0.65);
+                    nutrients.rdp += ingredientRdp * ratio;
+                    nutrients.udp += (ingredient.nutrients.cp - ingredientRdp) * ratio;
+                    
+                    // 计算ME，如果原料没有提供ME值，则根据TDN计算
+                    // 基于BCNRM模型的能量计算方法，使用更准确的转换因子
+                    const ingredientMe = ingredient.nutrients.me || (ingredientTdn * 0.044); // BCNRM标准转换因子
+                    nutrients.me += ingredientMe * ratio;
+                    
+                    // 计算NEm和NEg，如果原料没有提供这些值，则根据ME计算
+                    // 基于BCNRM模型的能量计算方法，使用更准确的转换因子
+                    const ingredientNem = ingredient.nutrients.nem || (ingredientMe * 0.62); // BCNRM标准转换因子
+                    const ingredientNeg = ingredient.nutrients.neg || (ingredientMe * 0.38); // BCNRM标准转换因子
+                    nutrients.nem += ingredientNem * ratio;
+                    nutrients.neg += ingredientNeg * ratio;
+                    
+                    // 其他营养成分
+                    nutrients.starch += ingredient.nutrients.starch * ratio;
+                    nutrients.ee += ingredient.nutrients.ee * ratio;
+                    nutrients.ndf += ingredient.nutrients.ndf * ratio;
+                    nutrients.adf += ingredient.nutrients.adf * ratio;
+                    
+                    // 计算PeNDF，如果原料没有提供PeNDF值，则根据NDF计算
+                    // 基于BCNRM模型的有效纤维计算方法
+                    const ingredientPendf = ingredient.nutrients.pendf || (ingredient.nutrients.ndf * 0.45); // BCNRM标准系数
+                    nutrients.pendf += ingredientPendf * ratio;
+                    
+                    // 矿物质
+                    nutrients.ca += ingredient.nutrients.ca * ratio;
+                    nutrients.p += ingredient.nutrients.p * ratio;
+                });
                 
-                // 计算TDN，如果原料没有提供TDN值，则根据其他营养成分计算
-                // 基于BCNRM模型的TDN计算方法，使用更准确的系数
-                const ingredientTdn = ingredient.nutrients.tdn || 
-                    (ingredient.nutrients.cp * 0.92 + // 蛋白质消化率调整（BCNRM标准）
-                     ingredient.nutrients.ee * 2.25 + // 脂肪消化率调整（BCNRM标准）
-                     ingredient.nutrients.starch * 0.98 + // 淀粉消化率调整（BCNRM标准）
-                     (ingredient.nutrients.ndf - ingredient.nutrients.adf) * 0.5 + // 半纤维素消化率调整（BCNRM标准）
-                     ingredient.nutrients.adf * 0.15); // 纤维素消化率调整（BCNRM标准）
-                nutrients.tdn += ingredientTdn * ratio;
+                // 计算钙磷比
+                // 基于BCNRM模型的钙磷比推荐值（1.5:1-2.5:1）
+                nutrients.caPRatio = nutrients.p > 0 ? nutrients.ca / nutrients.p : 0;
                 
-                // 粗蛋白
-                nutrients.cp += ingredient.nutrients.cp * ratio;
+                // 计算RDP/CP比例
+                nutrients.rdpCPRatio = nutrients.cp > 0 ? nutrients.rdp / nutrients.cp : 0;
                 
-                // 计算RDP和UDP，如果原料没有提供RDP值，则使用粗蛋白的65%
-                // 基于BCNRM模型的蛋白质计算方法
-                const ingredientRdp = ingredient.nutrients.rdp || (ingredient.nutrients.cp * 0.65);
-                nutrients.rdp += ingredientRdp * ratio;
-                nutrients.udp += (ingredient.nutrients.cp - ingredientRdp) * ratio;
-                
-                // 计算ME，如果原料没有提供ME值，则根据TDN计算
-                // 基于BCNRM模型的能量计算方法，使用更准确的转换因子
-                const ingredientMe = ingredient.nutrients.me || (ingredientTdn * 0.044); // BCNRM标准转换因子
-                nutrients.me += ingredientMe * ratio;
-                
-                // 计算NEm和NEg，如果原料没有提供这些值，则根据ME计算
-                // 基于BCNRM模型的能量计算方法，使用更准确的转换因子
-                const ingredientNem = ingredient.nutrients.nem || (ingredientMe * 0.62); // BCNRM标准转换因子
-                const ingredientNeg = ingredient.nutrients.neg || (ingredientMe * 0.38); // BCNRM标准转换因子
-                nutrients.nem += ingredientNem * ratio;
-                nutrients.neg += ingredientNeg * ratio;
-                
-                // 其他营养成分
-                nutrients.starch += ingredient.nutrients.starch * ratio;
-                nutrients.ee += ingredient.nutrients.ee * ratio;
-                nutrients.ndf += ingredient.nutrients.ndf * ratio;
-                nutrients.adf += ingredient.nutrients.adf * ratio;
-                
-                // 计算PeNDF，如果原料没有提供PeNDF值，则根据NDF计算
-                // 基于BCNRM模型的有效纤维计算方法
-                const ingredientPendf = ingredient.nutrients.pendf || (ingredient.nutrients.ndf * 0.45); // BCNRM标准系数
-                nutrients.pendf += ingredientPendf * ratio;
-                
-                // 矿物质
-                nutrients.ca += ingredient.nutrients.ca * ratio;
-                nutrients.p += ingredient.nutrients.p * ratio;
-            });
-            
-            // 计算钙磷比
-            // 基于BCNRM模型的钙磷比推荐值（1.5:1-2.5:1）
-            nutrients.caPRatio = nutrients.p > 0 ? nutrients.ca / nutrients.p : 0;
-            
-            // 计算RDP/CP比例
-            nutrients.rdpCPRatio = nutrients.cp > 0 ? nutrients.rdp / nutrients.cp : 0;
-            
-            // 更新配方营养指标（提高精度，保留更多小数位）
-            const calculatedNutrients = {
+                // 更新配方营养指标（提高精度，保留更多小数位）
+                const calculatedNutrients = {
                 dm: parseFloat(nutrients.dm.toFixed(2)),
                 tdn: parseFloat(nutrients.tdn.toFixed(2)),
                 cp: parseFloat(nutrients.cp.toFixed(2)),
@@ -7399,7 +7253,11 @@
                 Logger.debug(`Body weight: ${bodyWeight}`, 'calculateDMI');
                 
                 // 获取目标日增重
-                const dailyGain = parseFloat(DOMUtils.getElement('daily-gain').value) || 1.5;
+                let dailyGain = 1.5; // 默认日增重
+                const dailyGainElement = DOMUtils.getElement('daily-gain');
+                if (dailyGainElement) {
+                    dailyGain = parseFloat(dailyGainElement.value) || 1.5;
+                }
                 Logger.debug(`Daily gain: ${dailyGain}`, 'calculateDMI');
                 
                 // 基于BCNRM模型的干物质采食量计算
@@ -7413,7 +7271,7 @@
             let fiberEffect = 0;
             let fatEffect = 0;
             
-            if (currentFormula.nutrients) {
+            if (currentFormula && currentFormula.nutrients) {
                 const nutrients = currentFormula.nutrients;
                 
                 // 1. 能量浓度影响 - BCNRM标准
@@ -7545,7 +7403,7 @@
             Logger.info('DMI calculated successfully', 'calculateDMI');
             return finalDMI;
             } catch (error) {
-                ErrorHandler.handleError(error, 'calculateDMI');
+                console.error('计算DMI时出错:', error);
                 // 返回默认值以确保函数不会崩溃
                 return bodyWeight * 0.025; // 默认采食量为体重的2.5%
             }
@@ -7768,18 +7626,30 @@
          * @returns {number} 配方当前干物质采食量
          */
         function calculateCurrentFormulaDMI() {
-            if (currentFormula.ingredients.length === 0) return 0;
-            
-            // 计算当前配方的干物质采食量
-            // 所有当前所选原料实际用量乘以所选原料干物质含量百分比的总和
-            let currentFormulaDMI = 0;
-            currentFormula.ingredients.forEach(ingredient => {
-                // 计算原料的干物质重量
-                const ingredientDMWeight = ingredient.weight * (ingredient.nutrients.dm / 100);
-                currentFormulaDMI += ingredientDMWeight;
-            });
-            
-            return currentFormulaDMI;
+            try {
+                if (!currentFormula || !currentFormula.ingredients || currentFormula.ingredients.length === 0) return 0;
+                
+                // 计算当前配方的干物质采食量
+                // 所有当前所选原料实际用量乘以所选原料干物质含量百分比的总和
+                let currentFormulaDMI = 0;
+                currentFormula.ingredients.forEach(ingredient => {
+                    // 计算原料的干物质重量，添加错误处理和默认值
+                    if (ingredient && ingredient.weight && ingredient.nutrients && ingredient.nutrients.dm) {
+                        const ingredientDMWeight = ingredient.weight * (ingredient.nutrients.dm / 100);
+                        currentFormulaDMI += ingredientDMWeight;
+                    }
+                });
+                
+                // 确保返回值是有效的数字
+                if (isNaN(currentFormulaDMI) || !isFinite(currentFormulaDMI)) {
+                    return 0;
+                }
+                
+                return currentFormulaDMI;
+            } catch (error) {
+                console.error('计算当前配方干物质采食量时出错:', error);
+                return 0;
+            }
         }
         
         /**
@@ -12988,9 +12858,6 @@ function renderIndicators(indicators) {
     
     // 渲染预览区
     renderIndicatorPreview(indicators);
-    
-    // 渲染指标修改操作区
-    renderIndicatorEdit(indicators);
 }
 
 /**
@@ -13484,6 +13351,9 @@ function renderIndicatorPreview(indicators) {
                 // 同步更新指标管理中的指标
                 syncIndicatorsWithFormula();
             });
+            
+            // 初始化已选原料列表的事件委托
+            initSelectedFeedsEventDelegation();
             
             // 配方优化按钮
             DOM.formula.optimizeFormulaBtn.addEventListener('click', optimizeFormula);
