@@ -56,11 +56,6 @@
     </script>
     <!-- Font Awesome -->
     <link href="assets/css/font-awesome.min.css" rel="stylesheet">
-    <!-- PWA支持 -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2196F3">
-    <link rel="icon" href="assets/webfonts/favicon.ico" type="image/x-icon">
-    <link rel="apple-touch-icon" href="assets/webfonts/favicon.ico">
     <!-- Chart.js -->
     <script src="assets/js/chart.umd.min.js"></script>
     <!-- Chart.js CDN fallback -->
@@ -83,144 +78,11 @@
             console.warn('Chart.js 本地加载失败，图表功能将不可用');
         } else {
             console.log('Chart.js loaded successfully:', Chart.version);
-            
-            // 直接初始化图表，使用固定测试数据
-            setTimeout(function() {
-                console.log('Directly initializing charts with test data...');
-                
-                const barCanvas = document.getElementById('nutrition-bar-chart');
-                const radarCanvas = document.getElementById('nutrition-radar-chart');
-                const comparisonCanvas = document.getElementById('nutrition-comparison-chart');
-                
-                if (barCanvas && radarCanvas && comparisonCanvas) {
-                    console.log('Canvas elements found, creating charts...');
-                    
-                    const barCtx = barCanvas.getContext('2d');
-                    const radarCtx = radarCanvas.getContext('2d');
-                    const comparisonCtx = comparisonCanvas.getContext('2d');
-                    
-                    const labels = ['干物质', '粗蛋白', '淀粉', '脂肪', '增重净能'];
-                    const testData = [70, 15, 25, 4, 6];
-                    const minData = [65, 13, 20, 3, 5.5];
-                    const maxData = [75, 17, 30, 5, 6.5];
-                    const avgData = minData.map((min, i) => (min + maxData[i]) / 2);
-                    
-                    // 创建柱状图
-                    try {
-                        window.nutritionBarChart = new Chart(barCtx, {
-                            type: 'bar',
-                            data: {
-                                labels: labels,
-                                datasets: [
-                                    {
-                                        label: '当前值',
-                                        data: testData,
-                                        backgroundColor: 'rgba(76, 175, 80, 0.8)',
-                                        borderColor: '#388E3C',
-                                        borderWidth: 2
-                                    },
-                                    {
-                                        label: '标准平均值',
-                                        data: avgData,
-                                        backgroundColor: 'rgba(33, 150, 243, 0.8)',
-                                        borderColor: '#1565C0',
-                                        borderWidth: 2
-                                    }
-                                ]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                title: {
-                                    display: true,
-                                    text: '营养指标分析'
-                                }
-                            }
-                        });
-                        console.log('Bar chart created successfully');
-                    } catch (error) {
-                        console.error('Error creating bar chart:', error);
-                    }
-                    
-                    // 创建雷达图
-                    try {
-                        window.nutritionRadarChart = new Chart(radarCtx, {
-                            type: 'radar',
-                            data: {
-                                labels: labels,
-                                datasets: [
-                                    {
-                                        label: '当前值',
-                                        data: testData,
-                                        backgroundColor: 'rgba(76, 175, 80, 0.3)',
-                                        borderColor: '#4CAF50',
-                                        borderWidth: 2
-                                    },
-                                    {
-                                        label: '标准范围',
-                                        data: avgData,
-                                        backgroundColor: 'rgba(33, 150, 243, 0.3)',
-                                        borderColor: '#1565C0',
-                                        borderWidth: 2
-                                    }
-                                ]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                title: {
-                                    display: true,
-                                    text: '营养指标雷达图'
-                                }
-                            }
-                        });
-                        console.log('Radar chart created successfully');
-                    } catch (error) {
-                        console.error('Error creating radar chart:', error);
-                    }
-                    
-                    // 创建对比图
-                    try {
-                        window.nutritionComparisonChart = new Chart(comparisonCtx, {
-                            type: 'bar',
-                            data: {
-                                labels: labels,
-                                datasets: [
-                                    {
-                                        label: '当前配方值',
-                                        data: testData,
-                                        backgroundColor: 'rgba(76, 175, 80, 0.8)',
-                                        borderColor: '#388E3C',
-                                        borderWidth: 2
-                                    },
-                                    {
-                                        label: '标准平均值',
-                                        data: avgData,
-                                        backgroundColor: 'rgba(33, 150, 243, 0.8)',
-                                        borderColor: '#1565C0',
-                                        borderWidth: 2
-                                    }
-                                ]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                title: {
-                                    display: true,
-                                    text: '营养指标对比'
-                                }
-                            }
-                        });
-                        console.log('Comparison chart created successfully');
-                    } catch (error) {
-                        console.error('Error creating comparison chart:', error);
-                    }
-                } else {
-                    console.warn('Canvas elements not found');
-                }
-            }, 1000);
         }
     </script>
+    
+    <!-- 系统诊断工具 -->
+    <script src="diagnostics.js"></script>
 
     <style type="text/tailwindcss">
         @layer base {
@@ -1793,6 +1655,387 @@
     </div>
 
     <script defer>
+        // ==================== 工具类 ====================
+        
+        // 错误处理工具类
+        class ErrorHandler {
+            static handleError(error, context = 'Unknown') {
+                console.error(`[Error in ${context}]:`, error);
+                
+                // 分类处理不同类型的错误
+                if (error instanceof NetworkError) {
+                    this.handleNetworkError(error);
+                } else if (error instanceof ValidationError) {
+                    this.handleValidationError(error);
+                } else if (error instanceof PermissionError) {
+                    this.handlePermissionError(error);
+                } else {
+                    this.handleGeneralError(error);
+                }
+            }
+            
+            static handleNetworkError(error) {
+                console.warn('Network error occurred:', error.message);
+                this.showToast('网络错误，请检查网络连接', 'error');
+            }
+            
+            static handleValidationError(error) {
+                console.warn('Validation error occurred:', error.message);
+                this.showToast(`数据验证错误: ${error.message}`, 'warning');
+            }
+            
+            static handlePermissionError(error) {
+                console.warn('Permission error occurred:', error.message);
+                this.showToast('权限不足，请联系管理员', 'error');
+            }
+            
+            static handleGeneralError(error) {
+                console.error('General error occurred:', error);
+                this.showToast('系统发生错误，请稍后重试', 'error');
+            }
+            
+            static showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                toast.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fa ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'} mr-2"></i>
+                        <span>${message}</span>
+                        <button class="toast-close ml-4">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                
+                document.body.appendChild(toast);
+                
+                // 显示 toast
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 100);
+                
+                // 3秒后隐藏
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300);
+                }, 3000);
+                
+                // 点击关闭
+                const closeBtn = toast.querySelector('.toast-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        toast.classList.remove('show');
+                        setTimeout(() => {
+                            if (toast.parentNode) {
+                                toast.parentNode.removeChild(toast);
+                            }
+                        }, 300);
+                    });
+                }
+            }
+        }
+        
+        // 自定义错误类
+        class NetworkError extends Error {
+            constructor(message) {
+                super(message);
+                this.name = 'NetworkError';
+            }
+        }
+        
+        class ValidationError extends Error {
+            constructor(message) {
+                super(message);
+                this.name = 'ValidationError';
+            }
+        }
+        
+        class PermissionError extends Error {
+            constructor(message) {
+                super(message);
+                this.name = 'PermissionError';
+            }
+        }
+        
+        // 日志系统
+        class Logger {
+            static levels = {
+                DEBUG: 0,
+                INFO: 1,
+                WARN: 2,
+                ERROR: 3
+            };
+            
+            static currentLevel = this.levels.INFO;
+            
+            static setLevel(level) {
+                this.currentLevel = level;
+            }
+            
+            static debug(message, context = 'Unknown') {
+                if (this.currentLevel <= this.levels.DEBUG) {
+                    this.log('DEBUG', message, context);
+                }
+            }
+            
+            static info(message, context = 'Unknown') {
+                if (this.currentLevel <= this.levels.INFO) {
+                    this.log('INFO', message, context);
+                }
+            }
+            
+            static warn(message, context = 'Unknown') {
+                if (this.currentLevel <= this.levels.WARN) {
+                    this.log('WARN', message, context);
+                }
+            }
+            
+            static error(message, context = 'Unknown') {
+                if (this.currentLevel <= this.levels.ERROR) {
+                    this.log('ERROR', message, context);
+                }
+            }
+            
+            static log(level, message, context) {
+                const timestamp = new Date().toISOString();
+                const logMessage = `[${timestamp}] [${level}] [${context}]: ${message}`;
+                
+                switch (level) {
+                    case 'ERROR':
+                        console.error(logMessage);
+                        break;
+                    case 'WARN':
+                        console.warn(logMessage);
+                        break;
+                    case 'DEBUG':
+                        console.debug(logMessage);
+                        break;
+                    default:
+                        console.log(logMessage);
+                }
+                
+                // 可以在这里添加日志存储逻辑
+            }
+        }
+        
+        // DOM操作工具类
+        class DOMUtils {
+            static elements = new Map();
+            
+            static getElement(id) {
+                if (this.elements.has(id)) {
+                    return this.elements.get(id);
+                }
+                
+                const element = document.getElementById(id);
+                if (element) {
+                    this.elements.set(id, element);
+                } else {
+                    console.warn(`DOM element not found: ${id}`);
+                }
+                return element;
+            }
+            
+            static getElementOrNull(id) {
+                const element = this.getElement(id);
+                if (!element) {
+                    Logger.warn(`Element with id '${id}' not found`, 'DOMUtils');
+                }
+                return element;
+            }
+            
+            static getElementWithFallback(id, fallback) {
+                const element = this.getElement(id);
+                return element || fallback;
+            }
+            
+            static setText(id, text) {
+                const element = this.getElementOrNull(id);
+                if (element) {
+                    element.textContent = text;
+                }
+            }
+            
+            static setValue(id, value) {
+                const element = this.getElementOrNull(id);
+                if (element) {
+                    element.value = value;
+                }
+            }
+            
+            static addEventListener(id, event, handler) {
+                const element = this.getElementOrNull(id);
+                if (element) {
+                    element.addEventListener(event, handler);
+                }
+            }
+            
+            static removeEventListener(id, event, handler) {
+                const element = this.getElementOrNull(id);
+                if (element) {
+                    element.removeEventListener(event, handler);
+                }
+            }
+        }
+        
+        // 数据备份工具类
+        class BackupManager {
+            static backupInterval = null;
+            static incrementalBackupInterval = null;
+            
+            static startBackupSchedule() {
+                // 每日全量备份
+                this.backupInterval = setInterval(() => {
+                    this.performFullBackup();
+                }, 24 * 60 * 60 * 1000); // 24小时
+                
+                // 每小时增量备份
+                this.incrementalBackupInterval = setInterval(() => {
+                    this.performIncrementalBackup();
+                }, 60 * 60 * 1000); // 1小时
+                
+                Logger.info('Backup schedule started', 'BackupManager');
+            }
+            
+            static stopBackupSchedule() {
+                if (this.backupInterval) {
+                    clearInterval(this.backupInterval);
+                    this.backupInterval = null;
+                }
+                
+                if (this.incrementalBackupInterval) {
+                    clearInterval(this.incrementalBackupInterval);
+                    this.incrementalBackupInterval = null;
+                }
+                
+                Logger.info('Backup schedule stopped', 'BackupManager');
+            }
+            
+            static performFullBackup() {
+                try {
+                    const backupData = {
+                        timestamp: new Date().toISOString(),
+                        type: 'full',
+                        data: {
+                            savedFormulas: JSON.parse(localStorage.getItem('savedFormulas') || '[]'),
+                            customIngredients: JSON.parse(localStorage.getItem('customIngredients') || '[]'),
+                            userSettings: JSON.parse(localStorage.getItem('userSettings') || '{}')
+                        }
+                    };
+                    
+                    const backupString = JSON.stringify(backupData);
+                    const backupKey = `backup_full_${Date.now()}`;
+                    
+                    // 存储备份
+                    localStorage.setItem(backupKey, backupString);
+                    
+                    // 清理旧备份（保留最近7天）
+                    this.cleanupOldBackups();
+                    
+                    Logger.info('Full backup completed', 'BackupManager');
+                } catch (error) {
+                    ErrorHandler.handleError(error, 'BackupManager.performFullBackup');
+                }
+            }
+            
+            static performIncrementalBackup() {
+                try {
+                    const backupData = {
+                        timestamp: new Date().toISOString(),
+                        type: 'incremental',
+                        data: {
+                            savedFormulas: JSON.parse(localStorage.getItem('savedFormulas') || '[]')
+                        }
+                    };
+                    
+                    const backupString = JSON.stringify(backupData);
+                    const backupKey = `backup_incremental_${Date.now()}`;
+                    
+                    // 存储备份
+                    localStorage.setItem(backupKey, backupString);
+                    
+                    // 清理旧的增量备份（保留最近24小时）
+                    this.cleanupIncrementalBackups();
+                    
+                    Logger.info('Incremental backup completed', 'BackupManager');
+                } catch (error) {
+                    ErrorHandler.handleError(error, 'BackupManager.performIncrementalBackup');
+                }
+            }
+            
+            static cleanupOldBackups() {
+                try {
+                    const now = Date.now();
+                    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+                    
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('backup_full_')) {
+                            const timestamp = parseInt(key.replace('backup_full_', ''));
+                            if (timestamp < sevenDaysAgo) {
+                                localStorage.removeItem(key);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    ErrorHandler.handleError(error, 'BackupManager.cleanupOldBackups');
+                }
+            }
+            
+            static cleanupIncrementalBackups() {
+                try {
+                    const now = Date.now();
+                    const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000;
+                    
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('backup_incremental_')) {
+                            const timestamp = parseInt(key.replace('backup_incremental_', ''));
+                            if (timestamp < twentyFourHoursAgo) {
+                                localStorage.removeItem(key);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    ErrorHandler.handleError(error, 'BackupManager.cleanupIncrementalBackups');
+                }
+            }
+            
+            static restoreBackup(backupKey) {
+                try {
+                    const backupString = localStorage.getItem(backupKey);
+                    if (!backupString) {
+                        throw new Error('Backup not found');
+                    }
+                    
+                    const backupData = JSON.parse(backupString);
+                    
+                    // 恢复数据
+                    if (backupData.data.savedFormulas) {
+                        localStorage.setItem('savedFormulas', JSON.stringify(backupData.data.savedFormulas));
+                    }
+                    
+                    if (backupData.data.customIngredients) {
+                        localStorage.setItem('customIngredients', JSON.stringify(backupData.data.customIngredients));
+                    }
+                    
+                    if (backupData.data.userSettings) {
+                        localStorage.setItem('userSettings', JSON.stringify(backupData.data.userSettings));
+                    }
+                    
+                    Logger.info(`Backup restored: ${backupKey}`, 'BackupManager');
+                    return true;
+                } catch (error) {
+                    ErrorHandler.handleError(error, 'BackupManager.restoreBackup');
+                    return false;
+                }
+            }
+        }
+        
         // ==================== 数据定义 ====================
 
         // 原料数据库
@@ -4145,94 +4388,88 @@
         // 营养标准数据表 - 基于NRC 2016和BCNRM模型
         const nutritionStandardTable = [
             // 150kg体重
-            { weight: 150, gain: 0.00, dm: 3.70, cp: 0.32, starch: 15.0, neg: 0.00, tdn: 52.0, me: 6.90, nem: 3.80, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 163.0 },
-            { weight: 150, gain: 1.25, dm: 4.50, cp: 0.82, starch: 25.0, neg: 2.20, tdn: 70.0, me: 11.30, nem: 3.80, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 537.0 },
-            { weight: 150, gain: 1.50, dm: 4.60, cp: 0.92, starch: 25.0, neg: 2.70, tdn: 73.0, me: 12.20, nem: 3.80, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 610.0 },
-            { weight: 150, gain: 1.75, dm: 4.70, cp: 1.01, starch: 35.0, neg: 3.10, tdn: 76.0, me: 12.90, nem: 3.80, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 682.0 },
-            { weight: 150, gain: 2.00, dm: 4.80, cp: 1.11, starch: 35.0, neg: 3.60, tdn: 79.0, me: 13.80, nem: 3.80, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 755.0 },
+            { weight: 150, gain: 0.00, dm: 3.70, cp: 0.32, starch: 15.0, neg: 0.00, tdn: 52.0, me: 6.90, nem: 3.80, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 163.0, ca: 4.60, p: 3.50 },
+            { weight: 150, gain: 1.25, dm: 4.50, cp: 0.82, starch: 25.0, neg: 2.20, tdn: 70.0, me: 11.30, nem: 3.80, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 537.0, ca: 43.10, p: 19.00 },
+            { weight: 150, gain: 1.50, dm: 4.60, cp: 0.92, starch: 25.0, neg: 2.70, tdn: 73.0, me: 12.20, nem: 3.80, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 610.0, ca: 50.60, p: 22.10 },
+            { weight: 150, gain: 1.75, dm: 4.70, cp: 1.01, starch: 35.0, neg: 3.10, tdn: 76.0, me: 12.90, nem: 3.80, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 682.0, ca: 58.10, p: 25.10 },
+            { weight: 150, gain: 2.00, dm: 4.80, cp: 1.11, starch: 35.0, neg: 3.60, tdn: 79.0, me: 13.80, nem: 3.80, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 755.0, ca: 65.50, p: 28.10 },
             
             // 200kg体重
-            { weight: 200, gain: 0.00, dm: 4.50, cp: 0.39, starch: 15.0, neg: 0.00, tdn: 52.0, me: 8.50, nem: 4.70, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 202.0 },
-            { weight: 200, gain: 1.25, dm: 5.50, cp: 0.88, starch: 25.0, neg: 2.70, tdn: 70.0, me: 13.90, nem: 4.70, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 573.0 },
-            { weight: 200, gain: 1.50, dm: 5.70, cp: 0.99, starch: 25.0, neg: 3.30, tdn: 73.0, me: 15.00, nem: 4.70, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 645.0 },
-            { weight: 200, gain: 1.75, dm: 5.90, cp: 1.09, starch: 35.0, neg: 3.90, tdn: 76.0, me: 16.10, nem: 4.70, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 716.0 },
-            { weight: 200, gain: 2.00, dm: 6.00, cp: 1.19, starch: 35.0, neg: 4.50, tdn: 79.0, me: 17.10, nem: 4.70, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 787.0 },
+            { weight: 200, gain: 0.00, dm: 4.50, cp: 0.39, starch: 15.0, neg: 0.00, tdn: 52.0, me: 8.50, nem: 4.70, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 202.0, ca: 6.20, p: 4.70 },
+            { weight: 200, gain: 1.25, dm: 5.50, cp: 0.88, starch: 25.0, neg: 2.70, tdn: 70.0, me: 13.90, nem: 4.70, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 573.0, ca: 42.50, p: 19.40 },
+            { weight: 200, gain: 1.50, dm: 5.70, cp: 0.99, starch: 25.0, neg: 3.30, tdn: 73.0, me: 15.00, nem: 4.70, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 645.0, ca: 49.50, p: 22.20 },
+            { weight: 200, gain: 1.75, dm: 5.90, cp: 1.09, starch: 35.0, neg: 3.90, tdn: 76.0, me: 16.10, nem: 4.70, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 716.0, ca: 56.50, p: 25.00 },
+            { weight: 200, gain: 2.00, dm: 6.00, cp: 1.19, starch: 35.0, neg: 4.50, tdn: 79.0, me: 17.10, nem: 4.70, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 787.0, ca: 63.40, p: 27.80 },
             
             // 250kg体重
-            { weight: 250, gain: 0.00, dm: 5.40, cp: 0.47, starch: 15.0, neg: 0.00, tdn: 52.0, me: 10.10, nem: 5.60, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 239.0 },
-            { weight: 250, gain: 1.25, dm: 6.50, cp: 0.95, starch: 25.0, neg: 3.20, tdn: 70.0, me: 16.60, nem: 5.60, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 609.0 },
-            { weight: 250, gain: 1.50, dm: 6.80, cp: 1.06, starch: 25.0, neg: 3.90, tdn: 73.0, me: 17.80, nem: 5.60, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 680.0 },
-            { weight: 250, gain: 1.75, dm: 6.90, cp: 1.16, starch: 35.0, neg: 4.60, tdn: 76.0, me: 19.10, nem: 5.60, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 750.0 },
-            { weight: 250, gain: 2.00, dm: 7.10, cp: 1.26, starch: 35.0, neg: 5.30, tdn: 79.0, me: 20.30, nem: 5.60, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 820.0 },
+            { weight: 250, gain: 0.00, dm: 5.40, cp: 0.47, starch: 15.0, neg: 0.00, tdn: 52.0, me: 10.10, nem: 5.60, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 239.0, ca: 7.20, p: 5.90 },
+            { weight: 250, gain: 1.25, dm: 6.50, cp: 0.95, starch: 25.0, neg: 3.20, tdn: 70.0, me: 16.60, nem: 5.60, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 609.0, ca: 47.00, p: 19.50 },
+            { weight: 250, gain: 1.50, dm: 6.80, cp: 1.06, starch: 25.0, neg: 3.90, tdn: 73.0, me: 17.80, nem: 5.60, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 680.0, ca: 48.50, p: 22.40 },
+            { weight: 250, gain: 1.75, dm: 6.90, cp: 1.16, starch: 35.0, neg: 4.60, tdn: 76.0, me: 19.10, nem: 5.60, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 750.0, ca: 55.00, p: 25.00 },
+            { weight: 250, gain: 2.00, dm: 7.10, cp: 1.26, starch: 35.0, neg: 5.30, tdn: 79.0, me: 20.30, nem: 5.60, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 820.0, ca: 61.50, p: 27.60 },
             
             // 300kg体重
-            { weight: 300, gain: 0.00, dm: 6.20, cp: 0.53, starch: 15.0, neg: 0.00, tdn: 52.0, me: 11.60, nem: 6.40, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 274.0 },
-            { weight: 300, gain: 1.25, dm: 7.50, cp: 1.01, starch: 25.0, neg: 3.70, tdn: 70.0, me: 19.00, nem: 6.40, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 643.0 },
-            { weight: 300, gain: 1.50, dm: 7.80, cp: 1.12, starch: 25.0, neg: 4.50, tdn: 73.0, me: 20.50, nem: 6.40, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 713.0 },
-            { weight: 300, gain: 1.75, dm: 8.00, cp: 1.22, starch: 35.0, neg: 5.30, tdn: 76.0, me: 21.90, nem: 6.40, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 783.0 },
-            { weight: 300, gain: 2.00, dm: 8.10, cp: 1.33, starch: 35.0, neg: 6.10, tdn: 79.0, me: 23.00, nem: 6.40, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 852.0 },
+            { weight: 300, gain: 0.00, dm: 6.20, cp: 0.53, starch: 15.0, neg: 0.00, tdn: 52.0, me: 11.60, nem: 6.40, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 274.0, ca: 9.20, p: 7.10 },
+            { weight: 300, gain: 1.25, dm: 7.50, cp: 1.01, starch: 25.0, neg: 3.70, tdn: 70.0, me: 19.00, nem: 6.40, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 643.0, ca: 41.50, p: 20.10 },
+            { weight: 300, gain: 1.50, dm: 7.80, cp: 1.12, starch: 25.0, neg: 4.50, tdn: 73.0, me: 20.50, nem: 6.40, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 713.0, ca: 47.60, p: 22.60 },
+            { weight: 300, gain: 1.75, dm: 8.00, cp: 1.22, starch: 35.0, neg: 5.30, tdn: 76.0, me: 21.90, nem: 6.40, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 783.0, ca: 53.70, p: 25.10 },
+            { weight: 300, gain: 2.00, dm: 8.10, cp: 1.33, starch: 35.0, neg: 6.10, tdn: 79.0, me: 23.00, nem: 6.40, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 852.0, ca: 59.70, p: 27.50 },
             
             // 350kg体重
-            { weight: 350, gain: 0.00, dm: 6.90, cp: 0.60, starch: 15.0, neg: 0.00, tdn: 52.0, me: 12.30, nem: 7.20, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 307.0 },
-            { weight: 350, gain: 1.25, dm: 8.40, cp: 1.07, starch: 25.0, neg: 4.10, tdn: 70.0, me: 21.30, nem: 7.20, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 677.0 },
-            { weight: 350, gain: 1.50, dm: 8.70, cp: 1.18, starch: 25.0, neg: 5.00, tdn: 73.0, me: 22.90, nem: 7.20, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 746.0 },
-            { weight: 350, gain: 1.75, dm: 8.90, cp: 1.29, starch: 35.0, neg: 5.90, tdn: 76.0, me: 24.50, nem: 7.20, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 815.0 },
-            { weight: 350, gain: 2.00, dm: 9.20, cp: 1.39, starch: 35.0, neg: 6.90, tdn: 79.0, me: 26.30, nem: 7.20, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 883.0 },
-            
-            // 650kg体重
-            { weight: 650, gain: 0.00, dm: 11.00, cp: 0.95, starch: 15.0, neg: 0.00, tdn: 52.0, me: 20.70, nem: 11.40, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 489.0 },
-            { weight: 650, gain: 1.25, dm: 13.30, cp: 1.55, starch: 25.0, neg: 6.50, tdn: 70.0, me: 33.70, nem: 11.40, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 780.0 },
-            { weight: 650, gain: 1.50, dm: 13.80, cp: 1.68, starch: 25.0, neg: 8.00, tdn: 73.0, me: 36.40, nem: 11.40, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 829.0 },
-            { weight: 650, gain: 1.75, dm: 14.20, cp: 1.79, starch: 35.0, neg: 9.40, tdn: 76.0, me: 38.90, nem: 11.40, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 878.0 },
-            { weight: 650, gain: 2.00, dm: 14.50, cp: 1.91, starch: 35.0, neg: 10.90, tdn: 79.0, me: 39.10, nem: 11.40, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 925.0 },
+            { weight: 350, gain: 0.00, dm: 6.90, cp: 0.60, starch: 15.0, neg: 0.00, tdn: 52.0, me: 12.30, nem: 7.20, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 307.0, ca: 10.80, p: 8.20 },
+            { weight: 350, gain: 1.25, dm: 8.40, cp: 1.07, starch: 25.0, neg: 4.10, tdn: 70.0, me: 21.30, nem: 7.20, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 677.0, ca: 41.20, p: 20.50 },
+            { weight: 350, gain: 1.50, dm: 8.70, cp: 1.18, starch: 25.0, neg: 5.00, tdn: 73.0, me: 22.90, nem: 7.20, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 746.0, ca: 46.90, p: 22.80 },
+            { weight: 350, gain: 1.75, dm: 8.90, cp: 1.29, starch: 35.0, neg: 5.90, tdn: 76.0, me: 24.50, nem: 7.20, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 815.0, ca: 52.60, p: 25.10 },
+            { weight: 350, gain: 2.00, dm: 9.20, cp: 1.39, starch: 35.0, neg: 6.90, tdn: 79.0, me: 26.30, nem: 7.20, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 883.0, ca: 58.20, p: 27.30 },
             
             // 400kg体重
-            { weight: 400, gain: 1.25, dm: 9.20, cp: 1.12, starch: 25.0, neg: 4.50, tdn: 70.0, me: 23.30, nem: 7.90, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 711.0 },
-            { weight: 400, gain: 1.50, dm: 9.50, cp: 1.23, starch: 25.0, neg: 5.50, tdn: 73.0, me: 25.10, nem: 7.90, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 780.0 },
-            { weight: 400, gain: 1.75, dm: 9.90, cp: 1.35, starch: 35.0, neg: 6.60, tdn: 76.0, me: 27.00, nem: 7.90, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 848.0 },
-            { weight: 400, gain: 2.00, dm: 10.10, cp: 1.45, starch: 35.0, neg: 7.60, tdn: 79.0, me: 28.90, nem: 7.90, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 915.0 },
+            { weight: 400, gain: 0.00, dm: 7.70, cp: 0.66, starch: 15.0, neg: 0.00, tdn: 52.0, me: 14.40, nem: 7.90, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 339.0, ca: 12.30, p: 9.40 },
+            { weight: 400, gain: 1.25, dm: 9.20, cp: 1.12, starch: 25.0, neg: 4.50, tdn: 70.0, me: 23.30, nem: 7.90, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 711.0, ca: 40.90, p: 21.00 },
+            { weight: 400, gain: 1.50, dm: 9.50, cp: 1.23, starch: 25.0, neg: 5.50, tdn: 73.0, me: 25.10, nem: 7.90, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 780.0, ca: 46.20, p: 23.10 },
+            { weight: 400, gain: 1.75, dm: 9.90, cp: 1.35, starch: 35.0, neg: 6.60, tdn: 76.0, me: 27.00, nem: 7.90, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 848.0, ca: 51.50, p: 25.00 },
+            { weight: 400, gain: 2.00, dm: 10.10, cp: 1.45, starch: 35.0, neg: 7.60, tdn: 79.0, me: 28.90, nem: 7.90, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 915.0, ca: 56.70, p: 27.30 },
             
             // 450kg体重
-            { weight: 450, gain: 0.00, dm: 8.40, cp: 0.73, starch: 15.0, neg: 0.00, tdn: 52.0, me: 15.80, nem: 8.70, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 371.0 },
-            { weight: 450, gain: 1.25, dm: 10.20, cp: 1.19, starch: 25.0, neg: 5.00, tdn: 70.0, me: 25.80, nem: 8.70, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 744.0 },
-            { weight: 450, gain: 1.50, dm: 10.50, cp: 1.30, starch: 25.0, neg: 6.10, tdn: 73.0, me: 27.80, nem: 8.70, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 813.0 },
-            { weight: 450, gain: 1.75, dm: 10.80, cp: 1.41, starch: 35.0, neg: 7.20, tdn: 76.0, me: 29.70, nem: 8.70, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 880.0 },
-            { weight: 450, gain: 2.00, dm: 11.10, cp: 1.51, starch: 35.0, neg: 8.30, tdn: 79.0, me: 31.70, nem: 8.70, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 947.0 },
+            { weight: 450, gain: 0.00, dm: 8.40, cp: 0.73, starch: 15.0, neg: 0.00, tdn: 52.0, me: 15.80, nem: 8.70, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 371.0, ca: 13.90, p: 10.60 },
+            { weight: 450, gain: 1.25, dm: 10.20, cp: 1.19, starch: 25.0, neg: 5.00, tdn: 70.0, me: 25.80, nem: 8.70, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 744.0, ca: 40.80, p: 21.50 },
+            { weight: 450, gain: 1.50, dm: 10.50, cp: 1.30, starch: 25.0, neg: 6.10, tdn: 73.0, me: 27.80, nem: 8.70, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 813.0, ca: 45.70, p: 23.40 },
+            { weight: 450, gain: 1.75, dm: 10.80, cp: 1.41, starch: 35.0, neg: 7.20, tdn: 76.0, me: 29.70, nem: 8.70, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 880.0, ca: 50.60, p: 25.40 },
+            { weight: 450, gain: 2.00, dm: 11.10, cp: 1.51, starch: 35.0, neg: 8.30, tdn: 79.0, me: 31.70, nem: 8.70, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 947.0, ca: 55.40, p: 27.30 },
             
             // 500kg体重
-            { weight: 500, gain: 0.00, dm: 9.10, cp: 0.79, starch: 15.0, neg: 0.00, tdn: 52.0, me: 17.00, nem: 9.40, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 402.0 },
-            { weight: 500, gain: 1.25, dm: 11.00, cp: 1.28, starch: 25.0, neg: 5.40, tdn: 70.0, me: 27.90, nem: 9.40, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 762.0 },
-            { weight: 500, gain: 1.50, dm: 11.40, cp: 1.39, starch: 25.0, neg: 6.60, tdn: 73.0, me: 30.10, nem: 9.40, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 827.0 },
-            { weight: 500, gain: 1.75, dm: 11.70, cp: 1.48, starch: 35.0, neg: 7.80, tdn: 76.0, me: 32.20, nem: 9.40, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 891.0 },
-            { weight: 500, gain: 2.00, dm: 12.00, cp: 1.58, starch: 35.0, neg: 9.00, tdn: 79.0, me: 34.30, nem: 9.40, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 955.0 },
+            { weight: 500, gain: 0.00, dm: 9.10, cp: 0.79, starch: 15.0, neg: 0.00, tdn: 52.0, me: 17.00, nem: 9.40, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 402.0, ca: 15.40, p: 11.80 },
+            { weight: 500, gain: 1.25, dm: 11.00, cp: 1.28, starch: 25.0, neg: 5.40, tdn: 70.0, me: 27.90, nem: 9.40, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 762.0, ca: 40.60, p: 22.00 },
+            { weight: 500, gain: 1.50, dm: 11.40, cp: 1.39, starch: 25.0, neg: 6.60, tdn: 73.0, me: 30.10, nem: 9.40, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 827.0, ca: 45.10, p: 23.80 },
+            { weight: 500, gain: 1.75, dm: 11.70, cp: 1.48, starch: 35.0, neg: 7.80, tdn: 76.0, me: 32.20, nem: 9.40, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 891.0, ca: 49.60, p: 25.60 },
+            { weight: 500, gain: 2.00, dm: 12.00, cp: 1.58, starch: 35.0, neg: 9.00, tdn: 79.0, me: 34.30, nem: 9.40, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 955.0, ca: 54.00, p: 27.40 },
             
             // 550kg体重
-            { weight: 550, gain: 0.00, dm: 9.70, cp: 0.84, starch: 15.0, neg: 0.00, tdn: 52.0, me: 18.30, nem: 10.10, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 432.0 },
-            { weight: 550, gain: 1.25, dm: 11.80, cp: 1.38, starch: 25.0, neg: 5.80, tdn: 70.0, me: 29.90, nem: 10.10, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 769.0 },
-            { weight: 550, gain: 1.50, dm: 12.20, cp: 1.48, starch: 25.0, neg: 7.00, tdn: 73.0, me: 32.10, nem: 10.10, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 828.0 },
-            { weight: 550, gain: 1.75, dm: 12.50, cp: 1.59, starch: 35.0, neg: 8.30, tdn: 76.0, me: 34.40, nem: 10.10, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 887.0 },
-            { weight: 550, gain: 2.00, dm: 12.90, cp: 1.70, starch: 35.0, neg: 9.70, tdn: 79.0, me: 36.90, nem: 10.10, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 945.0 },
+            { weight: 550, gain: 0.00, dm: 9.70, cp: 0.84, starch: 15.0, neg: 0.00, tdn: 52.0, me: 18.30, nem: 10.10, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 432.0, ca: 16.90, p: 12.90 },
+            { weight: 550, gain: 1.25, dm: 11.80, cp: 1.38, starch: 25.0, neg: 5.80, tdn: 70.0, me: 29.90, nem: 10.10, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 769.0, ca: 40.40, p: 22.40 },
+            { weight: 550, gain: 1.50, dm: 12.20, cp: 1.48, starch: 25.0, neg: 7.00, tdn: 73.0, me: 32.10, nem: 10.10, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 828.0, ca: 44.60, p: 24.10 },
+            { weight: 550, gain: 1.75, dm: 12.50, cp: 1.59, starch: 35.0, neg: 8.30, tdn: 76.0, me: 34.40, nem: 10.10, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 887.0, ca: 48.70, p: 25.70 },
+            { weight: 550, gain: 2.00, dm: 12.90, cp: 1.70, starch: 35.0, neg: 9.70, tdn: 79.0, me: 36.90, nem: 10.10, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 945.0, ca: 52.70, p: 27.40 },
             
             // 600kg体重
-            { weight: 600, gain: 0.00, dm: 10.30, cp: 0.89, starch: 15.0, neg: 0.00, tdn: 52.0, me: 19.40, nem: 10.70, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 461.0 },
-            { weight: 600, gain: 1.25, dm: 12.60, cp: 1.47, starch: 25.0, neg: 6.20, tdn: 70.0, me: 31.90, nem: 10.70, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 774.0 },
-            { weight: 600, gain: 1.50, dm: 13.00, cp: 1.58, starch: 25.0, neg: 7.50, tdn: 73.0, me: 34.20, nem: 10.70, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 829.0 },
-            { weight: 600, gain: 1.75, dm: 13.40, cp: 1.69, starch: 35.0, neg: 8.90, tdn: 76.0, me: 36.70, nem: 10.70, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 883.0 },
-            { weight: 600, gain: 2.00, dm: 13.70, cp: 1.80, starch: 35.0, neg: 10.30, tdn: 79.0, me: 39.10, nem: 10.70, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 935.0 },
+            { weight: 600, gain: 0.00, dm: 10.30, cp: 0.89, starch: 15.0, neg: 0.00, tdn: 52.0, me: 19.40, nem: 10.70, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 461.0, ca: 18.50, p: 14.10 },
+            { weight: 600, gain: 1.25, dm: 12.60, cp: 1.47, starch: 25.0, neg: 6.20, tdn: 70.0, me: 31.90, nem: 10.70, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 774.0, ca: 40.40, p: 22.90 },
+            { weight: 600, gain: 1.50, dm: 13.00, cp: 1.58, starch: 25.0, neg: 7.50, tdn: 73.0, me: 34.20, nem: 10.70, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 829.0, ca: 44.20, p: 24.50 },
+            { weight: 600, gain: 1.75, dm: 13.40, cp: 1.69, starch: 35.0, neg: 8.90, tdn: 76.0, me: 36.70, nem: 10.70, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 883.0, ca: 48.00, p: 26.00 },
+            { weight: 600, gain: 2.00, dm: 13.70, cp: 1.80, starch: 35.0, neg: 10.30, tdn: 79.0, me: 39.10, nem: 10.70, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 935.0, ca: 51.60, p: 27.60 },
             
             // 650kg体重
-            { weight: 650, gain: 0.00, dm: 11.00, cp: 0.95, starch: 15.0, neg: 0.00, tdn: 52.0, me: 20.70, nem: 11.40, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 489.0 },
-            { weight: 650, gain: 1.25, dm: 13.30, cp: 1.55, starch: 25.0, neg: 6.50, tdn: 70.0, me: 33.70, nem: 11.40, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 780.0 },
-            { weight: 650, gain: 1.50, dm: 13.80, cp: 1.68, starch: 25.0, neg: 8.00, tdn: 73.0, me: 36.40, nem: 11.40, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 829.0 },
-            { weight: 650, gain: 1.75, dm: 14.20, cp: 1.79, starch: 35.0, neg: 9.40, tdn: 76.0, me: 38.90, nem: 11.40, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 878.0 },
-            { weight: 650, gain: 2.00, dm: 14.50, cp: 1.91, starch: 35.0, neg: 10.90, tdn: 79.0, me: 39.10, nem: 11.40, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 925.0 },
+            { weight: 650, gain: 0.00, dm: 11.00, cp: 0.95, starch: 15.0, neg: 0.00, tdn: 52.0, me: 20.70, nem: 11.40, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 489.0, ca: 20.00, p: 15.30 },
+            { weight: 650, gain: 1.25, dm: 13.30, cp: 1.55, starch: 25.0, neg: 6.50, tdn: 70.0, me: 33.70, nem: 11.40, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 780.0, ca: 40.30, p: 23.50 },
+            { weight: 650, gain: 1.50, dm: 13.80, cp: 1.68, starch: 25.0, neg: 8.00, tdn: 73.0, me: 36.40, nem: 11.40, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 829.0, ca: 43.80, p: 24.90 },
+            { weight: 650, gain: 1.75, dm: 14.20, cp: 1.79, starch: 35.0, neg: 9.40, tdn: 76.0, me: 38.90, nem: 11.40, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 878.0, ca: 47.20, p: 26.30 },
+            { weight: 650, gain: 2.00, dm: 14.50, cp: 1.91, starch: 35.0, neg: 10.90, tdn: 79.0, me: 39.10, nem: 11.40, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 925.0, ca: 50.40, p: 27.60 },
             
             // 700kg体重
-            { weight: 700, gain: 0.00, dm: 11.70, cp: 1.01, starch: 15.0, neg: 0.00, tdn: 52.0, me: 21.90, nem: 12.10, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 517.0 },
-            { weight: 700, gain: 1.25, dm: 14.10, cp: 1.65, starch: 25.0, neg: 6.90, tdn: 70.0, me: 35.70, nem: 12.10, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 785.0 },
-            { weight: 700, gain: 1.50, dm: 14.60, cp: 1.77, starch: 25.0, neg: 8.40, tdn: 73.0, me: 38.50, nem: 12.10, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 830.0 },
-            { weight: 700, gain: 1.75, dm: 15.00, cp: 1.91, starch: 35.0, neg: 10.00, tdn: 76.0, me: 41.30, nem: 12.10, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 873.0 },
-            { weight: 700, gain: 2.00, dm: 15.50, cp: 2.04, starch: 35.0, neg: 11.60, tdn: 79.0, me: 44.20, nem: 12.10, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 915.0 }
+            { weight: 700, gain: 0.00, dm: 11.70, cp: 1.01, starch: 15.0, neg: 0.00, tdn: 52.0, me: 21.90, nem: 12.10, roughage: 50.0, pendf: 20.0, rdp: 65, udp: 35, mp: 517.0, ca: 21.60, p: 16.50 },
+            { weight: 700, gain: 1.25, dm: 14.10, cp: 1.65, starch: 25.0, neg: 6.90, tdn: 70.0, me: 35.70, nem: 12.10, roughage: 38.0, pendf: 16.0, rdp: 68, udp: 32, mp: 785.0, ca: 40.30, p: 25.30 },
+            { weight: 700, gain: 1.50, dm: 14.60, cp: 1.77, starch: 25.0, neg: 8.40, tdn: 73.0, me: 38.50, nem: 12.10, roughage: 38.0, pendf: 16.0, rdp: 70, udp: 30, mp: 830.0, ca: 43.50, p: 25.30 },
+            { weight: 700, gain: 1.75, dm: 15.00, cp: 1.91, starch: 35.0, neg: 10.00, tdn: 76.0, me: 41.30, nem: 12.10, roughage: 25.0, pendf: 12.0, rdp: 72, udp: 28, mp: 873.0, ca: 46.50, p: 26.60 },
+            { weight: 700, gain: 2.00, dm: 15.50, cp: 2.04, starch: 35.0, neg: 11.60, tdn: 79.0, me: 44.20, nem: 12.10, roughage: 25.0, pendf: 12.0, rdp: 75, udp: 25, mp: 915.0, ca: 49.40, p: 27.70 }
         ];
 
         // 基于体重和日增重生成营养需求标准 - 基于提供的表格数据
@@ -5883,206 +6120,8 @@
 
         // ==================== 全局变量 ====================
 
-        // DOM 元素缓存
-        const DOM = {
-            // 配方制作页面
-            formula: {
-                name: document.getElementById('formula-name'),
-                stage: document.getElementById('cattle-stage'),
-                customWeight: document.getElementById('custom-weight'),
-                dailyGain: document.getElementById('daily-gain'),
-                totalWeight: document.getElementById('total-weight'),
-                concentrateTotal: document.getElementById('concentrate-total'),
-                formulaType: document.querySelectorAll('input[name="formula-type"]'),
-                saveButton: document.getElementById('save-formula'),
-                clearButton: document.getElementById('clear-formula'),
-                selectedFeeds: document.getElementById('selected-feeds'),
-                noFeedsMessage: document.getElementById('no-feeds-message'),
-                percentageSum: document.getElementById('percentage-sum'),
-                recommendedAmount: document.getElementById('recommended-amount'),
-                feedList: document.getElementById('feed-list'),
-                customWeightContainer: document.getElementById('custom-weight-container'),
-                addConcentrateToTMR: document.getElementById('add-concentrate-to-tmr'),
-                concentrateSelect: document.getElementById('concentrate-select'),
-                optimizeFormulaBtn: document.getElementById('optimize-formula-btn'),
-                feedSearch: document.getElementById('feed-search'),
-                tmrSettings: document.getElementById('tmr-settings'),
-                concentrateSettings: document.getElementById('concentrate-settings')
-            },
-            // 指标管理页面
-            indicators: {
-                display: document.getElementById('indicator-display'),
-                preview: document.getElementById('indicator-preview'),
-                page: document.getElementById('page-indicators'),
-                liveCattlePrice: document.getElementById('live-cattle-price'),
-                targetDailyGain: document.getElementById('target-daily-gain'),
-                costAnalysisCards: document.getElementById('cost-analysis-cards'),
-                resetBtn: document.getElementById('reset-indicators-btn'),
-                saveBtn: document.getElementById('save-indicators-btn')
-            },
-            // 营养指标表格
-            nutrition: {
-                dmiValue: document.getElementById('dmi-value'),
-                dmiStandard: document.getElementById('dmi-standard'),
-                dmiDiff: document.getElementById('dmi-diff'),
-                dmiStatus: document.getElementById('dmi-status'),
-                dmPercentValue: document.getElementById('dm-percent-value'),
-                dmPercentStandard: document.getElementById('dm-percent-standard'),
-                dmPercentDiff: document.getElementById('dm-percent-diff'),
-                dmPercentStatus: document.getElementById('dm-percent-status'),
-                dmWeightValue: document.getElementById('dm-weight-value'),
-                dmWeightStandard: document.getElementById('dm-weight-standard'),
-                dmWeightDiff: document.getElementById('dm-weight-diff'),
-                dmWeightStatus: document.getElementById('dm-weight-status'),
-                tdnValue: document.getElementById('tdn-value'),
-                tdnStandard: document.getElementById('tdn-standard'),
-                tdnDiff: document.getElementById('tdn-diff'),
-                tdnStatus: document.getElementById('tdn-status'),
-                meValue: document.getElementById('me-value'),
-                meStandard: document.getElementById('me-standard'),
-                meDiff: document.getElementById('me-diff'),
-                meStatus: document.getElementById('me-status'),
-                nemValue: document.getElementById('nem-value'),
-                nemStandard: document.getElementById('nem-standard'),
-                nemDiff: document.getElementById('nem-diff'),
-                nemStatus: document.getElementById('nem-status'),
-                negValue: document.getElementById('neg-value'),
-                negStandard: document.getElementById('neg-standard'),
-                negDiff: document.getElementById('neg-diff'),
-                negStatus: document.getElementById('neg-status'),
-                availableNegValue: document.getElementById('available-neg-value'),
-                availableNegStandard: document.getElementById('available-neg-standard'),
-                availableNegDiff: document.getElementById('available-neg-diff'),
-                availableNegStatus: document.getElementById('available-neg-status'),
-                cpKgValue: document.getElementById('cp-kg-value'),
-                cpKgStandard: document.getElementById('cp-kg-standard'),
-                cpKgDiff: document.getElementById('cp-kg-diff'),
-                cpKgStatus: document.getElementById('cp-kg-status'),
-                mpValue: document.getElementById('mp-value'),
-                mpStandard: document.getElementById('mp-standard'),
-                mpDiff: document.getElementById('mp-diff'),
-                mpStatus: document.getElementById('mp-status'),
-                roughageRatioValue: document.getElementById('roughage-ratio-value'),
-                roughageRatioStandard: document.getElementById('roughage-ratio-standard'),
-                roughageRatioDiff: document.getElementById('roughage-ratio-diff'),
-                roughageRatioStatus: document.getElementById('roughage-ratio-status'),
-                pendfValue: document.getElementById('pendf-value'),
-                pendfStandard: document.getElementById('pendf-standard'),
-                pendfDiff: document.getElementById('pendf-diff'),
-                pendfStatus: document.getElementById('pendf-status'),
-                caValue: document.getElementById('ca-value'),
-                caStandard: document.getElementById('ca-standard'),
-                caDiff: document.getElementById('ca-diff'),
-                caStatus: document.getElementById('ca-status'),
-                pValue: document.getElementById('p-value'),
-                pStandard: document.getElementById('p-standard'),
-                pDiff: document.getElementById('p-diff'),
-                pStatus: document.getElementById('p-status'),
-                rnebValue: document.getElementById('rneb-value'),
-                rnebStandard: document.getElementById('rneb-standard'),
-                rnebDiff: document.getElementById('rneb-diff'),
-                rnebStatus: document.getElementById('rneb-status'),
-                udpValue: document.getElementById('udp-value'),
-                udpStandard: document.getElementById('udp-standard'),
-                udpDiff: document.getElementById('udp-diff'),
-                udpStatus: document.getElementById('udp-status'),
-                caRatioValue: document.getElementById('ca-ratio-value'),
-                caRatioStandard: document.getElementById('ca-ratio-standard'),
-                caRatioDiff: document.getElementById('ca-ratio-diff'),
-                caRatioStatus: document.getElementById('ca-ratio-status'),
-                showFormula: document.getElementById('show-nutrition-formula'),
-                formulaInfo: document.getElementById('nutrition-formula-info')
-            },
-            // 浓度差异表格
-            concentration: {
-                tdnPercentValue: document.getElementById('tdn-percent-value'),
-                tdnPercentStandard: document.getElementById('tdn-percent-standard'),
-                tdnPercentDiff: document.getElementById('tdn-percent-diff'),
-                mePerUnitValue: document.getElementById('me-per-unit-value'),
-                mePerUnitStandard: document.getElementById('me-per-unit-standard'),
-                mePerUnitDiff: document.getElementById('me-per-unit-diff'),
-                nemPerUnitValue: document.getElementById('nem-per-unit-value'),
-                nemPerUnitStandard: document.getElementById('nem-per-unit-standard'),
-                nemPerUnitDiff: document.getElementById('nem-per-unit-diff'),
-                negPerUnitValue: document.getElementById('neg-per-unit-value'),
-                negPerUnitStandard: document.getElementById('neg-per-unit-standard'),
-                negPerUnitDiff: document.getElementById('neg-per-unit-diff'),
-                cpPercentValue: document.getElementById('cp-percent-value'),
-                cpPercentStandard: document.getElementById('cp-percent-standard'),
-                cpPercentDiff: document.getElementById('cp-percent-diff'),
-                starchPercentValue: document.getElementById('starch-percent-value'),
-                starchPercentStandard: document.getElementById('starch-percent-standard'),
-                starchPercentDiff: document.getElementById('starch-percent-diff')
-            },
-            // 原料详情模态框
-            modal: {
-                feedDetail: document.getElementById('feed-detail-modal'),
-                feedName: document.getElementById('modal-feed-name'),
-                feedCategory: document.getElementById('modal-feed-category'),
-                nutritionTable: document.getElementById('modal-nutrition-table'),
-                addFeed: document.getElementById('add-feed-from-modal'),
-                close: document.getElementById('close-modal'),
-                ingredientEdit: document.getElementById('ingredient-edit-modal'),
-                closeEdit: document.getElementById('close-edit-modal')
-            },
-            // 成本分析
-            cost: {
-                feedCost: document.getElementById('feed-cost-value'),
-                dailyGain: document.getElementById('daily-gain-value'),
-                liveCattlePrice: document.getElementById('live-cattle-price-value'),
-                dailyProfit: document.getElementById('daily-profit-value'),
-                feedConversion: document.getElementById('feed-conversion-value'),
-                costPerKgGain: document.getElementById('cost-per-kg-gain-value'),
-                roi: document.getElementById('roi-value'),
-                profitCycle: document.getElementById('profit-cycle-value')
-            },
-            // 图表
-            charts: {
-                nutritionBar: document.getElementById('nutrition-bar-chart'),
-                nutritionRadar: document.getElementById('nutrition-radar-chart'),
-                nutritionComparison: document.getElementById('nutrition-comparison-chart'),
-                comparison: document.getElementById('comparison-chart')
-            },
-            // 页面
-            pages: {
-                formula: document.getElementById('page-formula'),
-                management: document.getElementById('page-management'),
-                indicators: document.getElementById('page-indicators'),
-                ingredients: document.getElementById('page-ingredients'),
-                about: document.getElementById('page-about'),
-                profit: document.getElementById('page-profit')
-            },
-            // 导航
-            nav: {
-                formula: document.getElementById('nav-formula'),
-                management: document.getElementById('nav-management'),
-                indicators: document.getElementById('nav-indicators'),
-                ingredients: document.getElementById('nav-ingredients'),
-                profit: document.getElementById('nav-profit'),
-                about: document.getElementById('nav-about'),
-                mobileMenuButton: document.getElementById('mobile-menu-button'),
-                mobileMenu: document.getElementById('mobile-menu'),
-                mobileNavFormula: document.getElementById('mobile-nav-formula'),
-                mobileNavManagement: document.getElementById('mobile-nav-management'),
-                mobileNavIndicators: document.getElementById('mobile-nav-indicators'),
-                mobileNavIngredients: document.getElementById('mobile-nav-ingredients'),
-                mobileNavProfit: document.getElementById('mobile-nav-profit'),
-                mobileNavAbout: document.getElementById('mobile-nav-about')
-            },
-            // 配方管理
-            management: {
-                compareFormulas: document.getElementById('compare-formulas'),
-                deleteSelectedFormulas: document.getElementById('delete-selected-formulas')
-            },
-            // 原料管理
-            ingredients: {
-                addButton: document.getElementById('add-ingredient-btn'),
-                saveButton: document.getElementById('save-ingredient-btn'),
-                deleteButton: document.getElementById('delete-ingredient-btn'),
-                search: document.getElementById('ingredient-search'),
-                list: document.getElementById('ingredients-list')
-            }
-        };
+        // DOM 元素缓存 - 稍后在initApp中初始化
+        let DOM;
 
         // 当前配方
         let currentFormula = {
@@ -6265,6 +6304,8 @@
          */
         function initFeedList() {
             console.log('initFeedList called');
+            console.log('DOM object:', DOM);
+            console.log('DOM.formula:', DOM.formula);
             const feedList = DOM.formula.feedList;
             console.log('feedList element:', feedList);
             if (!feedList) {
@@ -6274,6 +6315,7 @@
             
             feedList.innerHTML = '';
             console.log('feedIngredients length:', feedIngredients.length);
+            console.log('feedIngredients:', feedIngredients);
             
             if (feedIngredients.length === 0) {
                 console.error('No ingredients found');
@@ -6761,52 +6803,60 @@
          * @param {number} percentage 比例
          */
         function updateFeedPercentage(index, percentage) {
-            // 限制比例范围
-            percentage = Math.max(0, Math.min(100, percentage));
-            
-            // 计算当前总重量
-            const totalWeight = calculateTotalWeight();
-            
-            // 计算当前总比例
-            const currentTotal = currentFormula.ingredients.reduce((sum, ingredient, i) => {
-                return i === index ? sum : sum + (ingredient.percentage || 0);
-            }, 0);
-            
-            // 计算剩余可分配比例
-            const remainingPercentage = Math.max(0, 100 - percentage);
-            
-            // 更新当前原料比例
-            currentFormula.ingredients[index].percentage = percentage;
-            
-            // 按比例调整其他原料
-            if (currentFormula.ingredients.length > 1 && currentTotal > 0) {
-                currentFormula.ingredients.forEach((ingredient, i) => {
-                    if (i !== index) {
-                        const newPercentage = (ingredient.percentage / currentTotal) * remainingPercentage;
-                        ingredient.percentage = newPercentage;
-                    }
-                });
+            try {
+                Logger.info(`Updating feed percentage for index ${index} to ${percentage}`, 'updateFeedPercentage');
+                
+                // 限制比例范围
+                percentage = Math.max(0, Math.min(100, percentage));
+                
+                // 计算当前总重量
+                const totalWeight = calculateTotalWeight();
+                
+                // 计算当前总比例
+                const currentTotal = currentFormula.ingredients.reduce((sum, ingredient, i) => {
+                    return i === index ? sum : sum + (ingredient.percentage || 0);
+                }, 0);
+                
+                // 计算剩余可分配比例
+                const remainingPercentage = Math.max(0, 100 - percentage);
+                
+                // 更新当前原料比例
+                currentFormula.ingredients[index].percentage = percentage;
+                
+                // 按比例调整其他原料
+                if (currentFormula.ingredients.length > 1 && currentTotal > 0) {
+                    currentFormula.ingredients.forEach((ingredient, i) => {
+                        if (i !== index) {
+                            const newPercentage = (ingredient.percentage / currentTotal) * remainingPercentage;
+                            ingredient.percentage = newPercentage;
+                        }
+                    });
+                }
+                
+                // 根据比例更新原料重量
+                if (totalWeight > 0) {
+                    currentFormula.ingredients.forEach(ingredient => {
+                        ingredient.weight = (ingredient.percentage / 100) * totalWeight;
+                    });
+                }
+                
+                // 重新渲染所有原料项
+                renderSelectedFeeds();
+                
+                // 更新其他元素
+                calculateFormulaNutrients();
+                updateNutritionTable();
+                
+                // 同步更新指标
+                syncIndicatorsWithFormula();
+                
+                // 实时保存
+                saveCurrentFormulaDebounced();
+                
+                Logger.info('Feed percentage updated successfully', 'updateFeedPercentage');
+            } catch (error) {
+                ErrorHandler.handleError(error, 'updateFeedPercentage');
             }
-            
-            // 根据比例更新原料重量
-            if (totalWeight > 0) {
-                currentFormula.ingredients.forEach(ingredient => {
-                    ingredient.weight = (ingredient.percentage / 100) * totalWeight;
-                });
-            }
-            
-            // 重新渲染所有原料项
-            renderSelectedFeeds();
-            
-            // 更新其他元素
-            calculateFormulaNutrients();
-            updateNutritionTable();
-            
-            // 同步更新指标
-            syncIndicatorsWithFormula();
-            
-            // 实时保存
-            saveCurrentFormulaDebounced();
         }
         
         /**
@@ -7121,33 +7171,20 @@
          * 计算配方营养指标
          */
         function calculateFormulaNutrients() {
-            if (currentFormula.ingredients.length === 0) return;
-            
-            console.log('calculateFormulaNutrients called');
-            console.log('Current ingredients:', currentFormula.ingredients);
-            
-            // 强制重新计算，禁用缓存
-            const currentTimestamp = Date.now();
-            // const cacheValid = (
-            //     formulaCalculationCache.timestamp > currentTimestamp - 1000 && // 1秒内缓存有效
-            //     formulaCalculationCache.ingredients.length === currentFormula.ingredients.length &&
-            //     formulaCalculationCache.ingredients.every((ing, index) => {
-            //         const currentIng = currentFormula.ingredients[index];
-            //         return ing.id === currentIng.id && ing.weight === currentIng.weight;
-            //     })
-            // );
-            // 
-            // if (cacheValid && formulaCalculationCache.nutrients) {
-            //     currentFormula.nutrients = formulaCalculationCache.nutrients;
-            //     console.log('Using cached nutrients:', currentFormula.nutrients);
-            //     return;
-            // }
-            
-            console.log('Recalculating nutrients...');
-            
-            // 计算总重量
-            const totalWeight = calculateTotalWeight();
-            console.log('Total weight:', totalWeight);
+            try {
+                if (currentFormula.ingredients.length === 0) return;
+                
+                Logger.info('Calculating formula nutrients', 'calculateFormulaNutrients');
+                Logger.debug(`Current ingredients: ${currentFormula.ingredients.length} items`, 'calculateFormulaNutrients');
+                
+                // 强制重新计算，禁用缓存
+                const currentTimestamp = Date.now();
+                
+                Logger.info('Recalculating nutrients...', 'calculateFormulaNutrients');
+                
+                // 计算总重量
+                const totalWeight = calculateTotalWeight();
+                Logger.debug(`Total weight: ${totalWeight}`, 'calculateFormulaNutrients');
             
             // 初始化营养指标
             const nutrients = {
@@ -7253,7 +7290,7 @@
             };
             
             currentFormula.nutrients = calculatedNutrients;
-            console.log('Calculated nutrients:', calculatedNutrients);
+            Logger.debug(`Calculated nutrients: ${JSON.stringify(calculatedNutrients)}`, 'calculateFormulaNutrients');
             
             // 更新缓存
             formulaCalculationCache = {
@@ -7261,29 +7298,38 @@
                 ingredients: JSON.parse(JSON.stringify(currentFormula.ingredients)),
                 nutrients: calculatedNutrients
             };
-            console.log('Cache updated');
-            console.log('Current formula nutrients:', currentFormula.nutrients);
+            Logger.debug('Cache updated', 'calculateFormulaNutrients');
+            Logger.debug(`Current formula nutrients: ${JSON.stringify(currentFormula.nutrients)}`, 'calculateFormulaNutrients');
+            Logger.info('Formula nutrients calculated successfully', 'calculateFormulaNutrients');
+            } catch (error) {
+                ErrorHandler.handleError(error, 'calculateFormulaNutrients');
+            }
         }
 
         /**
          * 更新营养指标表格
          */
         function updateNutritionTable() {
-            const stage = document.getElementById('cattle-stage').value;
-            const dailyGain = parseFloat(document.getElementById('daily-gain').value) || 1.5;
-            let standard;
-            let bodyWeight;
-            
-            // 获取营养标准和体重
-            if (stage === 'custom') {
-                // 自定义体重，动态生成营养标准
-                bodyWeight = parseInt(document.getElementById('custom-weight').value) || 400;
-                standard = generateNutritionStandard(bodyWeight, dailyGain);
-            } else {
-                // 预定义体重阶段，根据日增重重新计算营养标准
-                bodyWeight = parseInt(stage.replace('w', ''));
-                standard = generateNutritionStandard(bodyWeight, dailyGain);
-            }
+            try {
+                Logger.info('Updating nutrition table', 'updateNutritionTable');
+                
+                const stage = DOMUtils.getElement('cattle-stage').value;
+                const dailyGain = parseFloat(DOMUtils.getElement('daily-gain').value) || 1.5;
+                let standard;
+                let bodyWeight;
+                
+                // 获取营养标准和体重
+                if (stage === 'custom') {
+                    // 自定义体重，动态生成营养标准
+                    bodyWeight = parseInt(DOMUtils.getElement('custom-weight').value) || 400;
+                    standard = generateNutritionStandard(bodyWeight, dailyGain);
+                } else {
+                    // 预定义体重阶段，根据日增重重新计算营养标准
+                    bodyWeight = parseInt(stage.replace('w', ''));
+                    standard = generateNutritionStandard(bodyWeight, dailyGain);
+                }
+                
+                Logger.debug(`Stage: ${stage}, Daily gain: ${dailyGain}, Body weight: ${bodyWeight}`, 'updateNutritionTable');
             
             // 计算干物质采食量 DMI
             let dmi;
@@ -7335,6 +7381,11 @@
             
             // 更新图表
             updateNutritionCharts();
+            
+            Logger.info('Nutrition table updated successfully', 'updateNutritionTable');
+            } catch (error) {
+                ErrorHandler.handleError(error, 'updateNutritionTable');
+            }
         }
         
         /**
@@ -7343,13 +7394,18 @@
          * @returns {number} 干物质采食量 (kg/d)
          */
         function calculateDMI(bodyWeight) {
-            // 获取目标日增重
-            const dailyGainElement = document.getElementById('daily-gain');
-            const dailyGain = dailyGainElement ? parseFloat(dailyGainElement.value) || 1.5 : 1.5;
-            
-            // 基于BCNRM模型的干物质采食量计算
-            // 公式：DMI = 0.070 × LBW^0.75 + (1.65 + 0.004 × LBW) × ADG
-            let baseDMI = 0.070 * Math.pow(bodyWeight, 0.75) + (1.65 + 0.004 * bodyWeight) * dailyGain;
+            try {
+                Logger.info('Calculating DMI', 'calculateDMI');
+                Logger.debug(`Body weight: ${bodyWeight}`, 'calculateDMI');
+                
+                // 获取目标日增重
+                const dailyGain = parseFloat(DOMUtils.getElement('daily-gain').value) || 1.5;
+                Logger.debug(`Daily gain: ${dailyGain}`, 'calculateDMI');
+                
+                // 基于BCNRM模型的干物质采食量计算
+                // 公式：DMI = 0.070 × LBW^0.75 + (1.65 + 0.004 × LBW) × ADG
+                let baseDMI = 0.070 * Math.pow(bodyWeight, 0.75) + (1.65 + 0.004 * bodyWeight) * dailyGain;
+                Logger.debug(`Base DMI: ${baseDMI}`, 'calculateDMI');
             
             // 考虑日粮营养组成的影响
             let energyEffect = 0;
@@ -7484,7 +7540,15 @@
             const minDMI = bodyWeight * (0.015 + dailyGain * 0.001); // 最低采食量
             const maxDMI = bodyWeight * (0.035 + dailyGain * 0.002); // 最高采食量
             
-            return Math.max(minDMI, Math.min(maxDMI, adjustedDMI));
+            const finalDMI = Math.max(minDMI, Math.min(maxDMI, adjustedDMI));
+            Logger.debug(`Final DMI: ${finalDMI}`, 'calculateDMI');
+            Logger.info('DMI calculated successfully', 'calculateDMI');
+            return finalDMI;
+            } catch (error) {
+                ErrorHandler.handleError(error, 'calculateDMI');
+                // 返回默认值以确保函数不会崩溃
+                return bodyWeight * 0.025; // 默认采食量为体重的2.5%
+            }
         }
         
         /**
@@ -7494,134 +7558,170 @@
          * @returns {number} 推荐精料添加量 (kg)
          */
         function calculateRecommendedConcentrate(bodyWeight, dailyGain = 1.5) {
-            // 基于NRC 2016和BCNRM模型的科学计算方法
-            
-            // 1. 计算维持净能需求 (MJ/d) - 基于NRC 2016
-            const nem = 0.322 * Math.pow(bodyWeight, 0.75);
-            
-            // 2. 计算增重净能需求 (MJ/d) - 基于NRC 2016
-            const neg = (2.092 + 0.0251 * bodyWeight) * dailyGain / (1 - 0.3 * dailyGain);
-            
-            // 3. 总净能需求
-            const totalNe = nem + neg;
-            
-            // 4. 计算干物质采食量 (DMI) - 基于NRC 2016和BCNRM模型
-            // 考虑体重、日增重和日粮能量浓度的综合影响
-            let dmi;
-            if (dailyGain <= 0) {
-                // 维持状态下的DMI
-                dmi = 0.018 * bodyWeight;
-            } else {
-                // 生长状态下的DMI
-                dmi = 0.022 * bodyWeight + 6.5 * dailyGain;
+            try {
+                Logger.info('Calculating recommended concentrate', 'calculateRecommendedConcentrate');
+                Logger.debug(`Body weight: ${bodyWeight}, Daily gain: ${dailyGain}`, 'calculateRecommendedConcentrate');
                 
-                // 考虑日粮能量浓度对采食量的影响
-                // 能量浓度越高，采食量越低
-                const energyDensity = 2.8; // 假设精料能量浓度为2.8 Mcal/kg DM
-                const energyEffect = Math.max(0.8, Math.min(1.2, 1 - (energyDensity - 2.5) * 0.1));
-                dmi *= energyEffect;
+                // 基于NRC 2016和BCNRM模型的科学计算方法
+                
+                // 1. 计算维持净能需求 (MJ/d) - 基于NRC 2016
+                const nem = 0.322 * Math.pow(bodyWeight, 0.75);
+                Logger.debug(`NEm: ${nem}`, 'calculateRecommendedConcentrate');
+                
+                // 2. 计算增重净能需求 (MJ/d) - 基于NRC 2016
+                const neg = (2.092 + 0.0251 * bodyWeight) * dailyGain / (1 - 0.3 * dailyGain);
+                Logger.debug(`NEg: ${neg}`, 'calculateRecommendedConcentrate');
+                
+                // 3. 总净能需求
+                const totalNe = nem + neg;
+                Logger.debug(`Total NE: ${totalNe}`, 'calculateRecommendedConcentrate');
+                
+                // 4. 计算干物质采食量 (DMI) - 基于NRC 2016和BCNRM模型
+                // 考虑体重、日增重和日粮能量浓度的综合影响
+                let dmi;
+                if (dailyGain <= 0) {
+                    // 维持状态下的DMI
+                    dmi = 0.018 * bodyWeight;
+                } else {
+                    // 生长状态下的DMI
+                    dmi = 0.022 * bodyWeight + 6.5 * dailyGain;
+                    
+                    // 考虑日粮能量浓度对采食量的影响
+                    // 能量浓度越高，采食量越低
+                    const energyDensity = 2.8; // 假设精料能量浓度为2.8 Mcal/kg DM
+                    const energyEffect = Math.max(0.8, Math.min(1.2, 1 - (energyDensity - 2.5) * 0.1));
+                    dmi *= energyEffect;
+                }
+                Logger.debug(`DMI: ${dmi}`, 'calculateRecommendedConcentrate');
+                
+                // 5. 精料占总日粮的比例
+                // 根据体重和日增重调整精料比例
+                let concentrateRatio;
+                
+                // 基于日增重的精料比例基础值
+                if (dailyGain < 0.8) {
+                    concentrateRatio = 0.40; // 低日增重时精料比例较低
+                } else if (dailyGain < 1.2) {
+                    concentrateRatio = 0.50;
+                } else if (dailyGain < 1.6) {
+                    concentrateRatio = 0.60;
+                } else if (dailyGain < 2.0) {
+                    concentrateRatio = 0.70;
+                } else if (dailyGain < 2.5) {
+                    concentrateRatio = 0.78;
+                } else {
+                    concentrateRatio = 0.85; // 高日增重时精料比例较高
+                }
+                
+                // 根据体重调整精料比例
+                if (bodyWeight < 250) {
+                    concentrateRatio *= 0.85; // 小体重牛精料比例适当降低
+                } else if (bodyWeight < 350) {
+                    concentrateRatio *= 0.92;
+                } else if (bodyWeight > 650) {
+                    concentrateRatio *= 1.05; // 大体重牛精料比例适当增加
+                } else if (bodyWeight > 550) {
+                    concentrateRatio *= 1.02;
+                }
+                Logger.debug(`Concentrate ratio: ${concentrateRatio}`, 'calculateRecommendedConcentrate');
+                
+                // 6. 计算精料干物质采食量
+                const concentrateDmi = dmi * concentrateRatio;
+                Logger.debug(`Concentrate DMI: ${concentrateDmi}`, 'calculateRecommendedConcentrate');
+                
+                // 7. 考虑精料干物质含量 (根据实际精料类型调整)
+                const concentrateDm = 0.88; // 假设精料干物质含量为88%
+                const concentrateAmount = concentrateDmi / concentrateDm;
+                Logger.debug(`Concentrate amount: ${concentrateAmount}`, 'calculateRecommendedConcentrate');
+                
+                // 8. 调整因子 - 考虑饲料质量、环境因素和品种差异
+                let adjustmentFactor = 1.0;
+                
+                // 饲料质量调整
+                adjustmentFactor *= 1.05; // 增加5%作为饲料质量安全系数
+                
+                // 环境温度调整
+                const temperature = 20; // 假设环境温度为20°C
+                if (temperature > 30) {
+                    adjustmentFactor *= 0.95; // 高温环境下采食量减少
+                } else if (temperature < 0) {
+                    adjustmentFactor *= 1.10; // 低温环境下采食量增加
+                }
+                
+                // 品种调整
+                // 假设为肉牛品种，调整系数为1.0
+                const breedFactor = 1.0;
+                adjustmentFactor *= breedFactor;
+                
+                const finalAmount = concentrateAmount * adjustmentFactor;
+                Logger.debug(`Final amount: ${finalAmount}`, 'calculateRecommendedConcentrate');
+                
+                // 9. 限制范围
+                const minAmount = Math.max(0.5, bodyWeight * 0.0025); // 最低精料量
+                const maxAmount = Math.min(12.0, bodyWeight * 0.018); // 最高精料量
+                
+                // 10. 根据营养浓度进一步调整
+                // 计算所需营养浓度
+                const requiredTdn = 65 + (dailyGain - 1.0) * 5; // 日增重每增加0.1kg，TDN需求增加0.5%
+                const requiredCp = 14 + (dailyGain - 1.0) * 2; // 日增重每增加0.1kg，CP需求增加0.2%
+                
+                // 根据营养浓度调整精料添加量
+                const nutrientAdjustment = (requiredTdn / 70) * (requiredCp / 16);
+                const nutrientAdjustedAmount = finalAmount * nutrientAdjustment;
+                Logger.debug(`Nutrient adjusted amount: ${nutrientAdjustedAmount}`, 'calculateRecommendedConcentrate');
+                
+                const result = Math.max(minAmount, Math.min(maxAmount, nutrientAdjustedAmount));
+                Logger.debug(`Result: ${result}`, 'calculateRecommendedConcentrate');
+                Logger.info('Recommended concentrate calculated successfully', 'calculateRecommendedConcentrate');
+                return result;
+            } catch (error) {
+                ErrorHandler.handleError(error, 'calculateRecommendedConcentrate');
+                // 返回默认值以确保函数不会崩溃
+                return Math.max(1.0, bodyWeight * 0.01); // 默认精料量为体重的1%
             }
-            
-            // 5. 精料占总日粮的比例
-            // 根据体重和日增重调整精料比例
-            let concentrateRatio;
-            
-            // 基于日增重的精料比例基础值
-            if (dailyGain < 0.8) {
-                concentrateRatio = 0.40; // 低日增重时精料比例较低
-            } else if (dailyGain < 1.2) {
-                concentrateRatio = 0.50;
-            } else if (dailyGain < 1.6) {
-                concentrateRatio = 0.60;
-            } else if (dailyGain < 2.0) {
-                concentrateRatio = 0.70;
-            } else if (dailyGain < 2.5) {
-                concentrateRatio = 0.78;
-            } else {
-                concentrateRatio = 0.85; // 高日增重时精料比例较高
-            }
-            
-            // 根据体重调整精料比例
-            if (bodyWeight < 250) {
-                concentrateRatio *= 0.85; // 小体重牛精料比例适当降低
-            } else if (bodyWeight < 350) {
-                concentrateRatio *= 0.92;
-            } else if (bodyWeight > 650) {
-                concentrateRatio *= 1.05; // 大体重牛精料比例适当增加
-            } else if (bodyWeight > 550) {
-                concentrateRatio *= 1.02;
-            }
-            
-            // 6. 计算精料干物质采食量
-            const concentrateDmi = dmi * concentrateRatio;
-            
-            // 7. 考虑精料干物质含量 (根据实际精料类型调整)
-            const concentrateDm = 0.88; // 假设精料干物质含量为88%
-            const concentrateAmount = concentrateDmi / concentrateDm;
-            
-            // 8. 调整因子 - 考虑饲料质量、环境因素和品种差异
-            let adjustmentFactor = 1.0;
-            
-            // 饲料质量调整
-            adjustmentFactor *= 1.05; // 增加5%作为饲料质量安全系数
-            
-            // 环境温度调整
-            const temperature = 20; // 假设环境温度为20°C
-            if (temperature > 30) {
-                adjustmentFactor *= 0.95; // 高温环境下采食量减少
-            } else if (temperature < 0) {
-                adjustmentFactor *= 1.10; // 低温环境下采食量增加
-            }
-            
-            // 品种调整
-            // 假设为肉牛品种，调整系数为1.0
-            const breedFactor = 1.0;
-            adjustmentFactor *= breedFactor;
-            
-            const finalAmount = concentrateAmount * adjustmentFactor;
-            
-            // 9. 限制范围
-            const minAmount = Math.max(0.5, bodyWeight * 0.0025); // 最低精料量
-            const maxAmount = Math.min(12.0, bodyWeight * 0.018); // 最高精料量
-            
-            // 10. 根据营养浓度进一步调整
-            // 计算所需营养浓度
-            const requiredTdn = 65 + (dailyGain - 1.0) * 5; // 日增重每增加0.1kg，TDN需求增加0.5%
-            const requiredCp = 14 + (dailyGain - 1.0) * 2; // 日增重每增加0.1kg，CP需求增加0.2%
-            
-            // 根据营养浓度调整精料添加量
-            const nutrientAdjustment = (requiredTdn / 70) * (requiredCp / 16);
-            const nutrientAdjustedAmount = finalAmount * nutrientAdjustment;
-            
-            return Math.max(minAmount, Math.min(maxAmount, nutrientAdjustedAmount));
         }
         
         /**
          * 更新推荐精料添加量
          */
         function updateRecommendedConcentrate() {
-            // 检查是否在精料配方模式
-            const formulaType = document.querySelector('input[name="formula-type"]:checked').value;
-            if (formulaType !== 'concentrate') return;
-            
-            // 获取体重和目标日增重
-            const stage = document.getElementById('cattle-stage').value;
-            const dailyGain = parseFloat(document.getElementById('daily-gain').value) || 1.5;
-            let bodyWeight;
-            
-            if (stage === 'custom') {
-                bodyWeight = parseInt(document.getElementById('custom-weight').value) || 400;
-            } else {
-                bodyWeight = parseInt(stage.replace('w', ''));
-            }
-            
-            // 计算推荐精料添加量
-            const recommendedAmount = calculateRecommendedConcentrate(bodyWeight, dailyGain);
-            
-            // 更新显示
-            const recommendedElement = document.getElementById('recommended-amount');
-            if (recommendedElement) {
-                recommendedElement.textContent = recommendedAmount.toFixed(2);
+            try {
+                Logger.info('Updating recommended concentrate', 'updateRecommendedConcentrate');
+                
+                // 检查是否在精料配方模式
+                const formulaType = document.querySelector('input[name="formula-type"]:checked').value;
+                if (formulaType !== 'concentrate') {
+                    Logger.debug('Not in concentrate formula mode, skipping', 'updateRecommendedConcentrate');
+                    return;
+                }
+                
+                // 获取体重和目标日增重
+                const stage = DOMUtils.getElement('cattle-stage').value;
+                const dailyGain = parseFloat(DOMUtils.getElement('daily-gain').value) || 1.5;
+                let bodyWeight;
+                
+                if (stage === 'custom') {
+                    bodyWeight = parseInt(DOMUtils.getElement('custom-weight').value) || 400;
+                } else {
+                    bodyWeight = parseInt(stage.replace('w', ''));
+                }
+                
+                Logger.debug(`Stage: ${stage}, Daily gain: ${dailyGain}, Body weight: ${bodyWeight}`, 'updateRecommendedConcentrate');
+                
+                // 计算推荐精料添加量
+                const recommendedAmount = calculateRecommendedConcentrate(bodyWeight, dailyGain);
+                Logger.debug(`Recommended concentrate: ${recommendedAmount}`, 'updateRecommendedConcentrate');
+                
+                // 更新显示
+                const recommendedElement = DOMUtils.getElement('recommended-amount');
+                if (recommendedElement) {
+                    recommendedElement.textContent = recommendedAmount.toFixed(2);
+                    Logger.info('Recommended concentrate updated successfully', 'updateRecommendedConcentrate');
+                } else {
+                    Logger.warn('Recommended amount element not found', 'updateRecommendedConcentrate');
+                }
+            } catch (error) {
+                ErrorHandler.handleError(error, 'updateRecommendedConcentrate');
             }
         }
         
@@ -7639,7 +7739,7 @@
             // 计算各原料的干物质采食量
             return currentFormula.ingredients.map(ingredient => {
                 // 计算原料在配方中的比例
-                const ratio = ingredient.weight / totalWeight;
+                const ratio = totalWeight > 0 ? ingredient.weight / totalWeight : 0;
                 
                 // 计算原料的实际添加量（鲜重）
                 const ingredientIntake = ingredient.weight;
@@ -7690,53 +7790,53 @@
          * @returns {Object} 详细营养指标
          */
         function calculateNutritionDetails(nutrients, dmi, bodyWeight) {
-            console.log('calculateNutritionDetails called');
-            console.log('Nutrients:', nutrients);
-            console.log('DMI:', dmi);
-            console.log('Body weight:', bodyWeight);
-            
-            // 获取目标日增重
-            const dailyGain = parseFloat(document.getElementById('daily-gain').value) || 1.5;
-            console.log('Daily gain:', dailyGain);
-            
-            // 计算TDN
-            // 基于BCNRM模型的TDN计算方法，使用更准确的系数
-            const tdn = nutrients.tdn || (nutrients.cp * 0.92 + // 蛋白质消化率调整（BCNRM标准）
-                                         nutrients.ee * 2.25 + // 脂肪消化率调整（BCNRM标准）
-                                         nutrients.starch * 0.98 + // 淀粉消化率调整（BCNRM标准）
-                                         (nutrients.ndf - nutrients.adf) * 0.5 + // 半纤维素消化率调整（BCNRM标准）
-                                         nutrients.adf * 0.15); // 纤维素消化率调整（BCNRM标准）
-            console.log('TDN:', tdn);
-            
-            // 计算代谢能 ME (MJ/d)
-            // 基于BCNRM模型的能量计算方法，使用更准确的转换因子
-            const me = (tdn * 0.044) * dmi; // BCNRM标准转换因子
-            
-            // 计算维持净能 NEm (MJ/d) - 基于日粮实际能量含量
-            // 基于BCNRM模型的能量转换方法
-            const nem = me * 0.62; // BCNRM标准转换因子
-            
-            // 计算增重净能 NEg (MJ/d) - 基于日粮实际能量含量
-            // 基于BCNRM模型的能量转换方法
-            const neg = me * 0.38; // BCNRM标准转换因子
-            
-            // 计算可用于增重的净能
-            const availableNeg = Math.max(0, neg);
-            
-            // 计算粗蛋白 (kg/d)
-            const cpKg = (nutrients.cp / 100) * dmi;
-            
-            // 计算代谢蛋白 (g/d) - 基于BCNRM模型
-            // 瘤胃可降解蛋白
-            const rdp = nutrients.rdp || (nutrients.cp * 0.65);
-            // 瘤胃微生物蛋白合成 (g/d) - BCNRM标准计算
-            const rumenAvailableEnergy = me * 0.65; // 瘤胃可利用能量
-            const mcp = Math.min(145 * dmi * 1000, (rdp / 100) * dmi * 1000 * 0.85, rumenAvailableEnergy * 1000 / 6.25); // BCNRM标准
-            // 过瘤胃蛋白 (g/d) - 使用更准确的UDP比例
-            const udpRatio = nutrients.udp ? (nutrients.udp / 100) : 0.35; // 优先使用原料中的UDP值，否则使用默认值0.35
-            const udp = (nutrients.cp * udpRatio) / 100 * dmi * 1000;
-            // 代谢蛋白 - BCNRM标准
-            const mp = mcp * 0.85 + udp * 0.85; // BCNRM标准消化率
+            try {
+                Logger.info('Calculating nutrition details', 'calculateNutritionDetails');
+                Logger.debug(`Nutrients: ${JSON.stringify(nutrients)}`, 'calculateNutritionDetails');
+                Logger.debug(`DMI: ${dmi}, Body weight: ${bodyWeight}`, 'calculateNutritionDetails');
+                
+                // 获取目标日增重
+                const dailyGain = parseFloat(DOMUtils.getElement('daily-gain').value) || 1.5;
+                Logger.debug(`Daily gain: ${dailyGain}`, 'calculateNutritionDetails');
+                
+                // 计算TDN
+                // 基于BCNRM模型的TDN计算方法，使用更准确的系数
+                const tdn = nutrients.tdn || (nutrients.cp * 0.92 + // 蛋白质消化率调整（BCNRM标准）
+                                             nutrients.ee * 2.25 + // 脂肪消化率调整（BCNRM标准）
+                                             nutrients.starch * 0.98 + // 淀粉消化率调整（BCNRM标准）
+                                             (nutrients.ndf - nutrients.adf) * 0.5 + // 半纤维素消化率调整（BCNRM标准）
+                                             nutrients.adf * 0.15); // 纤维素消化率调整（BCNRM标准）
+                Logger.debug(`TDN: ${tdn}`, 'calculateNutritionDetails');
+                
+                // 计算代谢能 ME (MJ/d)
+                // 基于BCNRM模型的能量计算方法，使用更准确的转换因子
+                const me = (tdn * 0.044) * dmi; // BCNRM标准转换因子
+                
+                // 计算维持净能 NEm (MJ/d) - 基于日粮实际能量含量
+                // 基于BCNRM模型的能量转换方法
+                const nem = me * 0.62; // BCNRM标准转换因子
+                
+                // 计算增重净能 NEg (MJ/d) - 基于日粮实际能量含量
+                // 基于BCNRM模型的能量转换方法
+                const neg = me * 0.38; // BCNRM标准转换因子
+                
+                // 计算可用于增重的净能
+                const availableNeg = Math.max(0, neg);
+                
+                // 计算粗蛋白 (kg/d)
+                const cpKg = (nutrients.cp / 100) * dmi;
+                
+                // 计算代谢蛋白 (g/d) - 基于BCNRM模型
+                // 瘤胃可降解蛋白
+                const rdp = nutrients.rdp || (nutrients.cp * 0.65);
+                // 瘤胃微生物蛋白合成 (g/d) - BCNRM标准计算
+                const rumenAvailableEnergy = me * 0.65; // 瘤胃可利用能量
+                const mcp = Math.min(145 * dmi * 1000, (rdp / 100) * dmi * 1000 * 0.85, rumenAvailableEnergy * 1000 / 6.25); // BCNRM标准
+                // 过瘤胃蛋白 (g/d) - 使用更准确的UDP比例
+                const udpRatio = nutrients.udp ? (nutrients.udp / 100) : 0.35; // 优先使用原料中的UDP值，否则使用默认值0.35
+                const udp = (nutrients.cp * udpRatio) / 100 * dmi * 1000;
+                // 代谢蛋白 - BCNRM标准
+                const mp = mcp * 0.85 + udp * 0.85; // BCNRM标准消化率
             
             // 计算粗料比
             const roughageRatio = calculateRoughageRatio(currentFormula.ingredients);
@@ -7763,7 +7863,7 @@
             
             // 计算各原料的干物质采食量
             const ingredientDMI = calculateIngredientDMI(dmi);
-            console.log('Ingredient DMI:', ingredientDMI);
+            Logger.debug(`Ingredient DMI: ${JSON.stringify(ingredientDMI)}`, 'calculateNutritionDetails');
             
             // 计算能量利用效率
             const energyEfficiency = calculateEnergyEfficiency(nutrients, bodyWeight, dailyGain);
@@ -7803,8 +7903,43 @@
                 ndfPercent: nutrients.ndf
             };
             
-            console.log('Nutrition details result:', result);
+            Logger.debug(`Nutrition details result: ${JSON.stringify(result)}`, 'calculateNutritionDetails');
+            Logger.info('Nutrition details calculated successfully', 'calculateNutritionDetails');
             return result;
+            } catch (error) {
+                ErrorHandler.handleError(error, 'calculateNutritionDetails');
+                // 返回默认值以确保函数不会崩溃
+                return {
+                    dmi: 0,
+                    tdn: 0,
+                    me: 0,
+                    nem: 0,
+                    neg: 0,
+                    availableNeg: 0,
+                    cpKg: 0,
+                    mp: 0,
+                    roughageRatio: 0,
+                    pendf: 0,
+                    ca: 0,
+                    p: 0,
+                    rneb: 0,
+                    udp: 0,
+                    caPRatio: 0,
+                    rdpCPRatio: 0,
+                    energyEfficiency: 0,
+                    proteinEfficiency: 0,
+                    ingredientDMI: [],
+                    tdnPercent: 0,
+                    mePerUnit: 0,
+                    nemPerUnit: 0,
+                    negPerUnit: 0,
+                    cpPercent: 0,
+                    udpPercent: 0,
+                    starchPercent: 0,
+                    eePercent: 0,
+                    ndfPercent: 0
+                };
+            }
         }
         
         /**
@@ -9175,23 +9310,40 @@
             // 检查是否有原料被添加
             const hasIngredients = currentFormula.ingredients.length > 0;
             
+            // 查找最接近的营养标准
+            let closestStandard = null;
+            let minDifference = Infinity;
+            
+            nutritionStandardTable.forEach(standard => {
+                const weightDiff = Math.abs(standard.weight - bodyWeight);
+                const gainDiff = Math.abs(standard.gain - dailyGain);
+                const totalDiff = weightDiff + gainDiff * 10; // 日增重差异权重更高
+                
+                if (totalDiff < minDifference) {
+                    minDifference = totalDiff;
+                    closestStandard = standard;
+                }
+            });
+            
             // 动态计算标准需求浓度 - 基于NRC 2016和BCNRM模型的最新研究成果
             
-            // 1. TDN百分比 - 优化计算
-            // 根据体重和日增重动态计算，考虑体重和日增重的交互作用
+            // 1. TDN百分比 - 使用nutritionStandardTable数据
             let tdnStandard;
-            if (dailyGain <= 0) {
-                tdnStandard = 65; // 维持状态下的TDN需求
+            if (closestStandard) {
+                tdnStandard = closestStandard.tdn;
             } else {
-                // 优化的TDN标准计算 - 基于NRC 2016和BCNRM模型
-                const baseTDN = 70;
-                const gainEffect = (dailyGain - 1.0) * 2.8; // 日增重对TDN的影响（调整系数）
-                const weightEffect = (bodyWeight - 400) * 0.018; // 体重对TDN的影响（调整系数）
-                const interactionEffect = (bodyWeight - 400) * (dailyGain - 1.0) * 0.0008; // 体重和日增重的交互作用
-                tdnStandard = baseTDN + gainEffect + weightEffect + interactionEffect;
-                // 限制TDN范围
-                tdnStandard = Math.max(65, Math.min(82, tdnStandard));
+                if (dailyGain <= 0) {
+                    tdnStandard = 65; // 维持状态下的TDN需求
+                } else {
+                    const baseTDN = 70;
+                    const gainEffect = (dailyGain - 1.0) * 2.8;
+                    const weightEffect = (bodyWeight - 400) * 0.018;
+                    const interactionEffect = (bodyWeight - 400) * (dailyGain - 1.0) * 0.0008;
+                    tdnStandard = baseTDN + gainEffect + weightEffect + interactionEffect;
+                }
             }
+            // 限制TDN范围
+            tdnStandard = Math.max(65, Math.min(82, tdnStandard));
             
             // 检查元素是否存在，避免空指针错误
             const tdnPercentValue = document.getElementById('tdn-percent-value');
@@ -9210,19 +9362,23 @@
                 tdnPercentStandard.textContent = tdnStandard.toFixed(2) + '%';
             }
             
-            // 2. 代谢能ME - 优化计算
+            // 2. 代谢能ME - 使用nutritionStandardTable数据
             let meStandard;
-            if (dailyGain <= 0) {
-                meStandard = 2.2; // 维持状态下的ME需求
+            if (closestStandard) {
+                // 计算每单位干物质的代谢能
+                meStandard = closestStandard.me / closestStandard.dm;
             } else {
-                // 优化的ME标准计算 - 基于NRC 2016和BCNRM模型
-                const baseME = 2.4;
-                const gainEffect = (dailyGain - 1.0) * 0.22; // 日增重对ME的影响（调整系数）
-                const weightEffect = (bodyWeight - 400) * 0.0008; // 体重对ME的影响（调整系数）
-                meStandard = baseME + gainEffect + weightEffect;
-                // 限制ME范围
-                meStandard = Math.max(2.2, Math.min(3.4, meStandard));
+                if (dailyGain <= 0) {
+                    meStandard = 2.2; // 维持状态下的ME需求
+                } else {
+                    const baseME = 2.4;
+                    const gainEffect = (dailyGain - 1.0) * 0.22;
+                    const weightEffect = (bodyWeight - 400) * 0.0008;
+                    meStandard = baseME + gainEffect + weightEffect;
+                }
             }
+            // 限制ME范围
+            meStandard = Math.max(2.2, Math.min(3.4, meStandard));
             
             // 检查元素是否存在
             const mePerUnitValue = document.getElementById('me-per-unit-value');
@@ -9241,10 +9397,16 @@
                 mePerUnitStandard.textContent = meStandard.toFixed(2);
             }
             
-            // 3. 维持净能NEm - 优化计算
-            const baseNEm = 1.65;
-            const nemWeightEffect = (bodyWeight - 400) * 0.0004; // 调整系数
-            const nemStandard = baseNEm + nemWeightEffect;
+            // 3. 维持净能NEm - 使用nutritionStandardTable数据
+            let nemStandard;
+            if (closestStandard) {
+                // 计算每单位干物质的维持净能
+                nemStandard = closestStandard.nem / closestStandard.dm;
+            } else {
+                const baseNEm = 1.65;
+                const nemWeightEffect = (bodyWeight - 400) * 0.0004;
+                nemStandard = baseNEm + nemWeightEffect;
+            }
             // 限制NEm范围
             const nemStandardLimited = Math.max(1.5, Math.min(2.1, nemStandard));
             
@@ -9265,19 +9427,23 @@
                 nemPerUnitStandard.textContent = nemStandardLimited.toFixed(2);
             }
             
-            // 4. 增重净能NEg - 优化计算
+            // 4. 增重净能NEg - 使用nutritionStandardTable数据
             let negStandard;
-            if (dailyGain <= 0) {
-                negStandard = 0; // 维持状态下不需要增重净能
+            if (closestStandard) {
+                // 计算每单位干物质的增重净能
+                negStandard = closestStandard.neg / closestStandard.dm;
             } else {
-                // 优化的NEg标准计算 - 基于NRC 2016和BCNRM模型
-                const baseNEg = 0.9;
-                const gainEffect = (dailyGain - 1.0) * 0.32; // 日增重对NEg的影响（调整系数）
-                const weightEffect = (bodyWeight - 400) * 0.0008; // 体重对NEg的影响（调整系数）
-                negStandard = baseNEg + gainEffect + weightEffect;
-                // 限制NEg范围
-                negStandard = Math.max(0, Math.min(1.9, negStandard));
+                if (dailyGain <= 0) {
+                    negStandard = 0; // 维持状态下不需要增重净能
+                } else {
+                    const baseNEg = 0.9;
+                    const gainEffect = (dailyGain - 1.0) * 0.32;
+                    const weightEffect = (bodyWeight - 400) * 0.0008;
+                    negStandard = baseNEg + gainEffect + weightEffect;
+                }
             }
+            // 限制NEg范围
+            negStandard = Math.max(0, Math.min(1.9, negStandard));
             
             // 检查元素是否存在
             const negPerUnitValue = document.getElementById('neg-per-unit-value');
@@ -9296,19 +9462,25 @@
                 negPerUnitStandard.textContent = negStandard.toFixed(2);
             }
             
-            // 5. 粗蛋白百分比 - 优化计算
+            // 5. 粗蛋白百分比 - 使用nutritionStandardTable数据
             let cpStandard;
-            if (dailyGain <= 0) {
-                cpStandard = 12; // 维持状态下的CP需求
+            
+            if (closestStandard) {
+                // 计算蛋白质百分比（基于干物质采食量）
+                cpStandard = (closestStandard.cp / closestStandard.dm) * 100;
             } else {
-                // 优化的CP标准计算 - 基于NRC 2016和BCNRM模型
-                const baseCP = 16;
-                const gainEffect = (dailyGain - 1.0) * 1.8; // 日增重对CP的影响（调整系数）
-                const weightEffect = (bodyWeight - 400) * -0.006; // 体重对CP的影响（体重增加，CP需求相对减少）
-                cpStandard = baseCP + gainEffect + weightEffect;
-                // 限制CP范围
-                cpStandard = Math.max(12, Math.min(22, cpStandard));
+                // 如果没有找到标准，使用默认值
+                if (dailyGain <= 0) {
+                    cpStandard = 12; // 维持状态下的CP需求
+                } else {
+                    const baseCP = 16;
+                    const gainEffect = (dailyGain - 1.0) * 1.8;
+                    const weightEffect = (bodyWeight - 400) * -0.006;
+                    cpStandard = baseCP + gainEffect + weightEffect;
+                }
             }
+            // 限制CP范围
+            cpStandard = Math.max(12, Math.min(22, cpStandard));
             
             // 检查元素是否存在
             const cpPercentValue = document.getElementById('cp-percent-value');
@@ -9465,305 +9637,297 @@
          * 更新营养指标图表
          */
         function updateNutritionCharts() {
-            console.log('=== updateNutritionCharts called ===');
-            
-            // 检查Chart.js是否加载成功
-            if (typeof Chart === 'undefined') {
-                console.warn('Chart.js未加载，跳过图表更新');
-                return;
-            }
-            
-            console.log('Chart.js version:', Chart.version);
-            console.log('Chart.js is loaded');
-            
-            // 确保配方页面是可见的
-            const formulaPage = document.getElementById('page-formula');
-            if (formulaPage.classList.contains('hidden')) {
-                console.warn('Formula page is hidden, skipping chart update');
-                return;
-            }
-            
-            console.log('Formula page visible:', true);
-            
-            const barCanvas = document.getElementById('nutrition-bar-chart');
-            const radarCanvas = document.getElementById('nutrition-radar-chart');
-            const comparisonCanvas = document.getElementById('nutrition-comparison-chart');
-            
-            console.log('Canvas elements:', { barCanvas, radarCanvas, comparisonCanvas });
-            
-            if (!barCanvas || !radarCanvas || !comparisonCanvas) {
-                console.warn('Canvas elements not found');
-                return;
-            }
-            
-            // 确保Canvas元素是可见的
-            if (!barCanvas.offsetParent || !radarCanvas.offsetParent || !comparisonCanvas.offsetParent) {
-                console.warn('Canvas elements are not visible');
-                return;
-            }
-            
-            console.log('Canvas elements are visible');
-            
-            const barCtx = barCanvas.getContext('2d');
-            const radarCtx = radarCanvas.getContext('2d');
-            const comparisonCtx = comparisonCanvas.getContext('2d');
-            
-            console.log('Contexts obtained:', { barCtx, radarCtx, comparisonCtx });
-            
-            // 确保Canvas上下文存在
-            if (!barCtx || !radarCtx || !comparisonCtx) {
-                console.warn('Canvas contexts not obtained');
-                return;
-            }
-            
-            console.log('Canvas contexts are valid');
-            
-            // 设置Canvas尺寸（确保有足够的尺寸）
-            barCanvas.width = barCanvas.offsetWidth;
-            barCanvas.height = barCanvas.offsetHeight;
-            radarCanvas.width = radarCanvas.offsetWidth;
-            radarCanvas.height = radarCanvas.offsetHeight;
-            comparisonCanvas.width = comparisonCanvas.offsetWidth;
-            comparisonCanvas.height = comparisonCanvas.offsetHeight;
-            
-            console.log('Canvas dimensions set:', {
-                bar: { width: barCanvas.width, height: barCanvas.height },
-                radar: { width: radarCanvas.width, height: radarCanvas.height },
-                comparison: { width: comparisonCanvas.width, height: comparisonCanvas.height }
-            });
-            
-            // 检查营养数据
-            console.log('Current formula ingredients:', currentFormula.ingredients.length);
-            console.log('Current formula nutrients:', currentFormula.nutrients);
-            
-            const stageElement = document.getElementById('cattle-stage');
-            const dailyGainElement = document.getElementById('daily-gain');
-            const customWeightElement = document.getElementById('custom-weight');
-            
-            const stage = stageElement ? stageElement.value : 'w400';
-            const dailyGain = dailyGainElement ? parseFloat(dailyGainElement.value) || 1.5 : 1.5;
-            let standard;
-            
-            // 获取营养标准
-            if (stage === 'custom') {
-                // 自定义体重，动态生成营养标准
-                const customWeight = customWeightElement ? parseInt(customWeightElement.value) || 400 : 400;
-                standard = generateNutritionStandard(customWeight, dailyGain);
-            } else {
-                // 预定义体重阶段，根据日增重重新计算营养标准
-                const bodyWeight = parseInt(stage.replace('w', '')) || 400;
-                standard = generateNutritionStandard(bodyWeight, dailyGain);
-            }
-            
-            // 检查是否有原料被添加
-            const hasIngredients = currentFormula.ingredients.length > 0;
-            
-            // 检查当前配方营养数据
-            console.log('Current formula nutrients:', currentFormula.nutrients);
-            console.log('Has ingredients:', hasIngredients);
-            
-            // 准备数据
-            const labels = ['干物质采食量', '粗蛋白', '淀粉', '脂肪', '增重净能'];
-            
-            // 计算干物质采食量
-            let dmi;
-            if (hasIngredients) {
-                // 使用当前配方的实际干物质采食量
-                dmi = calculateCurrentFormulaDMI();
-            } else {
-                // 使用估计的干物质采食量
-                const bodyWeight = stage === 'custom' ? (customWeightElement ? parseInt(customWeightElement.value) || 400 : 400) : parseInt(stage.replace('w', '')) || 400;
-                dmi = calculateDMI(bodyWeight);
-            }
-            
-            // 当有原料时，使用实际值；当没有原料时，使用默认值
-            let currentValues;
-            if (hasIngredients && currentFormula.nutrients) {
-                currentValues = [
-                    dmi || 0,
-                    currentFormula.nutrients.cp || 15,
-                    currentFormula.nutrients.starch || 25,
-                    currentFormula.nutrients.ee || 4,
-                    currentFormula.nutrients.neg || 6
-                ];
-            } else {
-                // 使用默认值，确保图表能够显示
-                currentValues = [dmi || 10, 15, 25, 4, 6];
-                console.log('Using default values for chart');
-            }
-            
-            console.log('Current values for chart:', currentValues);
-            
-            // 检查标准对象是否有效
-            console.log('Standard object:', standard);
-            if (!standard || !standard.cp || !standard.starch || !standard.ee || !standard.neg) {
-                console.error('Invalid standard object:', standard);
-                return;
-            }
-            
-            // 计算干物质采食量的标准范围（基于体重和日增重）
-            const bodyWeight = stage === 'custom' ? (customWeightElement ? parseInt(customWeightElement.value) || 400 : 400) : parseInt(stage.replace('w', '')) || 400;
-            const baseDMI = calculateDMI(bodyWeight);
-            const dmiMin = baseDMI * 0.9; // 标准最小值为基础值的90%
-            const dmiMax = baseDMI * 1.1; // 标准最大值为基础值的110%
-            
-            const minValues = [
-                dmiMin,
-                standard.cp.min,
-                standard.starch.min,
-                standard.ee.min,
-                standard.neg.min
-            ];
-            const maxValues = [
-                dmiMax,
-                standard.cp.max,
-                standard.starch.max,
-                standard.ee.max,
-                standard.neg.max
-            ];
-            
-            // 检查minValues和maxValues是否有效
-            console.log('Min values:', minValues);
-            console.log('Max values:', maxValues);
-            
-            // 计算标准平均值，用于更清晰的对比
-            const avgValues = minValues.map((min, index) => (min + maxValues[index]) / 2);
-            console.log('Avg values:', avgValues);
-            
-            // 更新柱状图
-            if (nutritionBarChart) {
-                // 根据是否有原料显示或隐藏当前值数据集
-                if (hasIngredients) {
-                    nutritionBarChart.data.datasets[0].data = currentValues;
-                    nutritionBarChart.data.datasets[0].hidden = false;
-                } else {
-                    nutritionBarChart.data.datasets[0].hidden = true;
+            try {
+                Logger.info('Starting nutrition charts update', 'updateNutritionCharts');
+                
+                // 检查Chart.js是否加载成功
+                if (typeof Chart === 'undefined') {
+                    Logger.warn('Chart.js not loaded, skipping chart update', 'updateNutritionCharts');
+                    return;
                 }
-                nutritionBarChart.data.datasets[1].data = minValues;
-                nutritionBarChart.data.datasets[2].data = maxValues;
-                nutritionBarChart.data.datasets[3].data = avgValues;
-                nutritionBarChart.update();
-            } else {
-                try {
-                    // 创建柱状图
-                    nutritionBarChart = new Chart(barCtx, {
-                        type: 'bar',
-                        data: {
-                            labels: labels,
-                            datasets: [
-                                {
-                                    label: '当前值',
-                                    data: currentValues,
-                                    backgroundColor: 'rgba(76, 175, 80, 0.8)',
-                                    borderColor: '#388E3C',
-                                    borderWidth: 2,
-                                    borderRadius: 8,
-                                    borderSkipped: false,
-                                    hidden: !hasIngredients
-                                },
-                                {
-                                    label: '标准最小值',
-                                    data: minValues,
-                                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                                    borderColor: 'rgba(255, 99, 132, 1)',
-                                    borderWidth: 2,
-                                    type: 'line',
-                                    fill: false,
-                                    borderDash: [5, 5],
-                                    pointRadius: 4,
-                                    pointHoverRadius: 6
-                                },
-                                {
-                                    label: '标准最大值',
-                                    data: maxValues,
-                                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                                    borderColor: 'rgba(54, 162, 235, 1)',
-                                    borderWidth: 2,
-                                    type: 'line',
-                                    fill: false,
-                                    borderDash: [5, 5],
-                                    pointRadius: 4,
-                                    pointHoverRadius: 6
-                                },
-                                {
-                                    label: '标准平均值',
-                                    data: avgValues,
-                                    backgroundColor: 'rgba(255, 206, 86, 0.2)',
-                                    borderColor: 'rgba(255, 206, 86, 1)',
-                                    borderWidth: 2,
-                                    type: 'line',
-                                    fill: false,
-                                    pointRadius: 4,
-                                    pointHoverRadius: 6
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            animation: {
-                                duration: 1000,
-                                easing: 'easeOutQuart'
+                
+                Logger.info(`Chart.js version: ${Chart.version}`, 'updateNutritionCharts');
+                
+                // 确保配方页面是可见的
+                const formulaPage = DOMUtils.getElement('page-formula');
+                if (!formulaPage || formulaPage.classList.contains('hidden')) {
+                    Logger.warn('Formula page is hidden, skipping chart update', 'updateNutritionCharts');
+                    return;
+                }
+                
+                // 使用DOMUtils获取Canvas元素
+                const barCanvas = DOMUtils.getElement('nutrition-bar-chart');
+                const radarCanvas = DOMUtils.getElement('nutrition-radar-chart');
+                const comparisonCanvas = DOMUtils.getElement('nutrition-comparison-chart');
+                
+                Logger.debug(`Canvas elements: bar=${!!barCanvas}, radar=${!!radarCanvas}, comparison=${!!comparisonCanvas}`, 'updateNutritionCharts');
+                
+                if (!barCanvas || !radarCanvas || !comparisonCanvas) {
+                    Logger.warn('Canvas elements not found', 'updateNutritionCharts');
+                    return;
+                }
+                
+                // 确保Canvas元素是可见的
+                if (!barCanvas.offsetParent || !radarCanvas.offsetParent || !comparisonCanvas.offsetParent) {
+                    Logger.warn('Canvas elements are not visible', 'updateNutritionCharts');
+                    return;
+                }
+                
+                const barCtx = barCanvas.getContext('2d');
+                const radarCtx = radarCanvas.getContext('2d');
+                const comparisonCtx = comparisonCanvas.getContext('2d');
+                
+                Logger.debug(`Contexts obtained: bar=${!!barCtx}, radar=${!!radarCtx}, comparison=${!!comparisonCtx}`, 'updateNutritionCharts');
+                
+                // 确保Canvas上下文存在
+                if (!barCtx || !radarCtx || !comparisonCtx) {
+                    Logger.warn('Canvas contexts not obtained', 'updateNutritionCharts');
+                    return;
+                }
+                
+                // 设置Canvas尺寸
+                barCanvas.width = barCanvas.offsetWidth;
+                barCanvas.height = barCanvas.offsetHeight;
+                radarCanvas.width = radarCanvas.offsetWidth;
+                radarCanvas.height = radarCanvas.offsetHeight;
+                comparisonCanvas.width = comparisonCanvas.offsetWidth;
+                comparisonCanvas.height = comparisonCanvas.offsetHeight;
+                
+                Logger.debug(`Canvas dimensions set: bar(${barCanvas.width}x${barCanvas.height}), radar(${radarCanvas.width}x${radarCanvas.height}), comparison(${comparisonCanvas.width}x${comparisonCanvas.height})`, 'updateNutritionCharts');
+                
+                // 检查营养数据
+                Logger.debug(`Current formula ingredients: ${currentFormula.ingredients.length}`, 'updateNutritionCharts');
+                Logger.debug(`Current formula nutrients: ${JSON.stringify(currentFormula.nutrients)}`, 'updateNutritionCharts');
+                
+                // 使用DOMUtils获取元素
+                const stageElement = DOMUtils.getElement('cattle-stage');
+                const dailyGainElement = DOMUtils.getElement('daily-gain');
+                const customWeightElement = DOMUtils.getElement('custom-weight');
+                
+                const stage = stageElement ? stageElement.value : 'w400';
+                const dailyGain = dailyGainElement ? parseFloat(dailyGainElement.value) || 1.5 : 1.5;
+                let standard;
+                
+                // 获取营养标准
+                if (stage === 'custom') {
+                    // 自定义体重，动态生成营养标准
+                    const customWeight = customWeightElement ? parseInt(customWeightElement.value) || 400 : 400;
+                    standard = generateNutritionStandard(customWeight, dailyGain);
+                } else {
+                    // 预定义体重阶段，根据日增重重新计算营养标准
+                    const bodyWeight = parseInt(stage.replace('w', '')) || 400;
+                    standard = generateNutritionStandard(bodyWeight, dailyGain);
+                }
+                
+                // 检查是否有原料被添加
+                const hasIngredients = currentFormula.ingredients.length > 0;
+                
+                // 检查当前配方营养数据
+                Logger.debug(`Current formula nutrients: ${JSON.stringify(currentFormula.nutrients)}`, 'updateNutritionCharts');
+                Logger.debug(`Has ingredients: ${hasIngredients}`, 'updateNutritionCharts');
+                
+                // 准备数据
+                const labels = ['干物质采食量', '粗蛋白', '淀粉', '脂肪', '增重净能'];
+                
+                // 计算干物质采食量
+                let dmi;
+                if (hasIngredients) {
+                    // 使用当前配方的实际干物质采食量
+                    dmi = calculateCurrentFormulaDMI();
+                } else {
+                    // 使用估计的干物质采食量
+                    const bodyWeight = stage === 'custom' ? (customWeightElement ? parseInt(customWeightElement.value) || 400 : 400) : parseInt(stage.replace('w', '')) || 400;
+                    dmi = calculateDMI(bodyWeight);
+                }
+                
+                // 当有原料时，使用实际值；当没有原料时，使用默认值
+                let currentValues;
+                if (hasIngredients && currentFormula.nutrients) {
+                    currentValues = [
+                        dmi || 0,
+                        currentFormula.nutrients.cp || 15,
+                        currentFormula.nutrients.starch || 25,
+                        currentFormula.nutrients.ee || 4,
+                        currentFormula.nutrients.neg || 6
+                    ];
+                } else {
+                    // 使用默认值，确保图表能够显示
+                    currentValues = [dmi || 10, 15, 25, 4, 6];
+                    Logger.debug('Using default values for chart', 'updateNutritionCharts');
+                }
+                
+                Logger.debug(`Current values for chart: ${currentValues}`, 'updateNutritionCharts');
+                
+                // 检查标准对象是否有效
+                Logger.debug(`Standard object: ${JSON.stringify(standard)}`, 'updateNutritionCharts');
+                if (!standard || !standard.cp || !standard.starch || !standard.ee || !standard.neg) {
+                    Logger.error('Invalid standard object', 'updateNutritionCharts');
+                    return;
+                }
+                
+                // 计算干物质采食量的标准范围（基于体重和日增重）
+                const bodyWeight = stage === 'custom' ? (customWeightElement ? parseInt(customWeightElement.value) || 400 : 400) : parseInt(stage.replace('w', '')) || 400;
+                const baseDMI = calculateDMI(bodyWeight);
+                const dmiMin = baseDMI * 0.9; // 标准最小值为基础值的90%
+                const dmiMax = baseDMI * 1.1; // 标准最大值为基础值的110%
+                
+                const minValues = [
+                    dmiMin,
+                    standard.cp.min,
+                    standard.starch.min,
+                    standard.ee.min,
+                    standard.neg.min
+                ];
+                const maxValues = [
+                    dmiMax,
+                    standard.cp.max,
+                    standard.starch.max,
+                    standard.ee.max,
+                    standard.neg.max
+                ];
+                
+                // 检查minValues和maxValues是否有效
+                Logger.debug(`Min values: ${minValues}`, 'updateNutritionCharts');
+                Logger.debug(`Max values: ${maxValues}`, 'updateNutritionCharts');
+                
+                // 计算标准平均值，用于更清晰的对比
+                const avgValues = minValues.map((min, index) => (min + maxValues[index]) / 2);
+                Logger.debug(`Avg values: ${avgValues}`, 'updateNutritionCharts');
+                
+                // 更新柱状图
+                if (nutritionBarChart) {
+                    // 根据是否有原料显示或隐藏当前值数据集
+                    if (hasIngredients) {
+                        nutritionBarChart.data.datasets[0].data = currentValues;
+                        nutritionBarChart.data.datasets[0].hidden = false;
+                    } else {
+                        nutritionBarChart.data.datasets[0].hidden = true;
+                    }
+                    nutritionBarChart.data.datasets[1].data = minValues;
+                    nutritionBarChart.data.datasets[2].data = maxValues;
+                    nutritionBarChart.data.datasets[3].data = avgValues;
+                    nutritionBarChart.update();
+                } else {
+                    try {
+                        // 创建柱状图
+                        nutritionBarChart = new Chart(barCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [
+                                    {
+                                        label: '当前值',
+                                        data: currentValues,
+                                        backgroundColor: 'rgba(76, 175, 80, 0.8)',
+                                        borderColor: '#388E3C',
+                                        borderWidth: 2,
+                                        borderRadius: 8,
+                                        borderSkipped: false,
+                                        hidden: !hasIngredients
+                                    },
+                                    {
+                                        label: '标准最小值',
+                                        data: minValues,
+                                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                        borderColor: 'rgba(255, 99, 132, 1)',
+                                        borderWidth: 2,
+                                        type: 'line',
+                                        fill: false,
+                                        borderDash: [5, 5],
+                                        pointRadius: 4,
+                                        pointHoverRadius: 6
+                                    },
+                                    {
+                                        label: '标准最大值',
+                                        data: maxValues,
+                                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                        borderColor: 'rgba(54, 162, 235, 1)',
+                                        borderWidth: 2,
+                                        type: 'line',
+                                        fill: false,
+                                        borderDash: [5, 5],
+                                        pointRadius: 4,
+                                        pointHoverRadius: 6
+                                    },
+                                    {
+                                        label: '标准平均值',
+                                        data: avgValues,
+                                        backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                                        borderColor: 'rgba(255, 206, 86, 1)',
+                                        borderWidth: 2,
+                                        type: 'line',
+                                        fill: false,
+                                        pointRadius: 4,
+                                        pointHoverRadius: 6
+                                    }
+                                ]
                             },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    title: {
-                                        display: true,
-                                        text: '数值',
-                                        font: {
-                                            size: 14,
-                                            weight: 'bold'
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                animation: {
+                                    duration: 1000,
+                                    easing: 'easeOutQuart'
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        title: {
+                                            display: true,
+                                            text: '数值',
+                                            font: {
+                                                size: 14,
+                                                weight: 'bold'
+                                            }
+                                        },
+                                        grid: {
+                                            color: 'rgba(0, 0, 0, 0.05)'
+                                        },
+                                        ticks: {
+                                            stepSize: 10,
+                                            callback: function(value) {
+                                                return value.toFixed(1);
+                                            },
+                                            font: {
+                                                size: 12
+                                            }
                                         }
                                     },
-                                    grid: {
-                                        color: 'rgba(0, 0, 0, 0.05)'
-                                    },
-                                    ticks: {
-                                        stepSize: 10,
-                                        callback: function(value) {
-                                            return value.toFixed(1);
+                                    x: {
+                                        title: {
+                                            display: true,
+                                            text: '营养指标',
+                                            font: {
+                                                size: 14,
+                                                weight: 'bold'
+                                            }
                                         },
-                                        font: {
-                                            size: 12
+                                        grid: {
+                                            display: false
+                                        },
+                                        ticks: {
+                                            maxRotation: 45,
+                                            minRotation: 45,
+                                            font: {
+                                                size: 12
+                                            }
                                         }
                                     }
                                 },
-                                x: {
-                                    title: {
-                                        display: true,
-                                        text: '营养指标',
-                                        font: {
-                                            size: 14,
-                                            weight: 'bold'
+                                plugins: {
+                                    legend: {
+                                        position: 'top',
+                                        labels: {
+                                            font: {
+                                                size: 12
+                                            },
+                                            usePointStyle: true,
+                                            padding: 20
                                         }
                                     },
-                                    grid: {
-                                        display: false
-                                    },
-                                    ticks: {
-                                        maxRotation: 45,
-                                        minRotation: 45,
-                                        font: {
-                                            size: 12
-                                        }
-                                    }
-                                }
-                            },
-                            plugins: {
-                                legend: {
-                                    position: 'top',
-                                    labels: {
-                                        font: {
-                                            size: 12
-                                        },
-                                        usePointStyle: true,
-                                        padding: 20
-                                    }
-                                },
-                                tooltip: {
-                                    mode: 'index',
-                                    intersect: true,
+                                    tooltip: {
+                                        mode: 'index',
+                                        intersect: true,
                                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
                                     titleFont: {
                                         size: 14,
@@ -10150,6 +10314,10 @@
             // 延迟添加点击事件监听器，确保图表已完全渲染
             setTimeout(addChartClickListeners, 300);
         }
+        catch (error) {
+            console.error('更新营养指标图表失败:', error);
+        }
+    }
 
         /**
          * 初始化图表交互修复
@@ -13040,26 +13208,40 @@ function renderIndicatorPreview(indicators) {
          * @param {string} pageId 页面ID: 'formula', 'management', 'indicators', 'about'
          */
         function switchPage(pageId) {
+            console.log('switchPage called with pageId:', pageId);
+            console.log('DOM.pages:', DOM.pages);
+            console.log('DOM.nav:', DOM.nav);
+            
             // 隐藏所有页面
-            document.getElementById('page-formula').classList.add('hidden');
-            document.getElementById('page-management').classList.add('hidden');
-            document.getElementById('page-indicators').classList.add('hidden');
-            document.getElementById('page-ingredients').classList.add('hidden');
-            document.getElementById('page-about').classList.add('hidden');
-            document.getElementById('page-profit').classList.add('hidden');
+            if (DOM.pages.formula) DOM.pages.formula.classList.add('hidden');
+            if (DOM.pages.management) DOM.pages.management.classList.add('hidden');
+            if (DOM.pages.indicators) DOM.pages.indicators.classList.add('hidden');
+            if (DOM.pages.ingredients) DOM.pages.ingredients.classList.add('hidden');
+            if (DOM.pages.about) DOM.pages.about.classList.add('hidden');
+            if (DOM.pages.profit) DOM.pages.profit.classList.add('hidden');
             
             // 显示选中的页面
-            document.getElementById(`page-${pageId}`).classList.remove('hidden');
+            if (DOM.pages[pageId]) {
+                DOM.pages[pageId].classList.remove('hidden');
+                console.log('Page', pageId, 'shown');
+            } else {
+                console.error('Page', pageId, 'not found');
+            }
             
             // 更新导航按钮状态
-            document.getElementById('nav-formula').classList.remove('bg-tertiary');
-            document.getElementById('nav-management').classList.remove('bg-tertiary');
-            document.getElementById('nav-indicators').classList.remove('bg-tertiary');
-            document.getElementById('nav-ingredients').classList.remove('bg-tertiary');
-            document.getElementById('nav-about').classList.remove('bg-tertiary');
-            document.getElementById('nav-profit').classList.remove('bg-tertiary');
+            if (DOM.nav.formula) DOM.nav.formula.classList.remove('bg-tertiary');
+            if (DOM.nav.management) DOM.nav.management.classList.remove('bg-tertiary');
+            if (DOM.nav.indicators) DOM.nav.indicators.classList.remove('bg-tertiary');
+            if (DOM.nav.ingredients) DOM.nav.ingredients.classList.remove('bg-tertiary');
+            if (DOM.nav.about) DOM.nav.about.classList.remove('bg-tertiary');
+            if (DOM.nav.profit) DOM.nav.profit.classList.remove('bg-tertiary');
             
-            document.getElementById(`nav-${pageId}`).classList.add('bg-tertiary');
+            if (DOM.nav[pageId]) {
+                DOM.nav[pageId].classList.add('bg-tertiary');
+                console.log('Navigation button', pageId, 'activated');
+            } else {
+                console.error('Navigation button', pageId, 'not found');
+            }
             
             // 特殊处理
             if (pageId === 'management') {
@@ -13100,15 +13282,20 @@ function renderIndicatorPreview(indicators) {
          * 初始化事件监听器
          */
         function initEventListeners() {
-            // 导航按钮
-            DOM.nav.formula.addEventListener('click', () => switchPage('formula'));
-            DOM.nav.management.addEventListener('click', () => switchPage('management'));
-            DOM.nav.indicators.addEventListener('click', () => switchPage('indicators'));
-            DOM.nav.ingredients.addEventListener('click', () => switchPage('ingredients'));
-            DOM.nav.profit.addEventListener('click', () => switchPage('profit'));
-            DOM.nav.about.addEventListener('click', () => switchPage('about'));
-            
-            // 原料分类按钮
+            try {
+                Logger.info('Initializing event listeners', 'initEventListeners');
+                
+                // 导航按钮
+                if (DOM.nav.formula) DOM.nav.formula.addEventListener('click', () => switchPage('formula'));
+                if (DOM.nav.management) DOM.nav.management.addEventListener('click', () => switchPage('management'));
+                if (DOM.nav.indicators) DOM.nav.indicators.addEventListener('click', () => switchPage('indicators'));
+                if (DOM.nav.ingredients) DOM.nav.ingredients.addEventListener('click', () => switchPage('ingredients'));
+                if (DOM.nav.profit) DOM.nav.profit.addEventListener('click', () => switchPage('profit'));
+                if (DOM.nav.about) DOM.nav.about.addEventListener('click', () => switchPage('about'));
+                
+                Logger.debug('Navigation event listeners initialized', 'initEventListeners');
+                
+                // 原料分类按钮
             document.querySelectorAll('.feed-category-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     // 更新按钮状态
@@ -13373,11 +13560,10 @@ function renderIndicatorPreview(indicators) {
             // 初始化配方管理页面的事件监听器
             initFormulaManagementListeners();
             
-            // 启动存储状态更新
-            startStorageStatusUpdates();
-            
-            // 初始化已选原料列表的事件委托
-            initSelectedFeedsEventDelegation();
+            Logger.info('Event listeners initialized successfully', 'initEventListeners');
+            } catch (error) {
+                ErrorHandler.handleError(error, 'initEventListeners');
+            }
         }
 
         // ==================== 原料管理功能 ====================
@@ -13697,59 +13883,305 @@ function renderIndicatorPreview(indicators) {
          */
         function initApp() {
             try {
+                Logger.info('Starting application initialization', 'initApp');
+                
+                // 检查DOM是否就绪
+                if (document.readyState !== 'complete' && document.readyState !== 'interactive') {
+                    Logger.warn('DOM not ready, waiting for DOMContentLoaded', 'initApp');
+                    document.addEventListener('DOMContentLoaded', initApp);
+                    return;
+                }
+                
+                // 初始化DOM元素缓存 - 使用DOMUtils
+                DOM = {
+                    // 配方制作页面
+                    formula: {
+                        name: DOMUtils.getElement('formula-name'),
+                        stage: DOMUtils.getElement('cattle-stage'),
+                        customWeight: DOMUtils.getElement('custom-weight'),
+                        dailyGain: DOMUtils.getElement('daily-gain'),
+                        totalWeight: DOMUtils.getElement('total-weight'),
+                        concentrateTotal: DOMUtils.getElement('concentrate-total'),
+                        formulaType: document.querySelectorAll('input[name="formula-type"]'),
+                        saveButton: DOMUtils.getElement('save-formula'),
+                        clearButton: DOMUtils.getElement('clear-formula'),
+                        selectedFeeds: DOMUtils.getElement('selected-feeds'),
+                        noFeedsMessage: DOMUtils.getElement('no-feeds-message'),
+                        percentageSum: DOMUtils.getElement('percentage-sum') || null,
+                        recommendedAmount: DOMUtils.getElement('recommended-amount'),
+                        feedList: DOMUtils.getElement('feed-list'),
+                        customWeightContainer: DOMUtils.getElement('custom-weight-container'),
+                        addConcentrateToTMR: DOMUtils.getElement('add-concentrate-to-tmr'),
+                        concentrateSelect: DOMUtils.getElement('concentrate-select'),
+                        optimizeFormulaBtn: DOMUtils.getElement('optimize-formula-btn'),
+                        feedSearch: DOMUtils.getElement('feed-search'),
+                        tmrSettings: DOMUtils.getElement('tmr-settings'),
+                        concentrateSettings: DOMUtils.getElement('concentrate-settings')
+                    },
+                    // 指标管理页面
+                    indicators: {
+                        display: DOMUtils.getElement('indicator-display'),
+                        preview: DOMUtils.getElement('indicator-preview'),
+                        page: DOMUtils.getElement('page-indicators'),
+                        liveCattlePrice: DOMUtils.getElement('live-cattle-price'),
+                        targetDailyGain: DOMUtils.getElement('target-daily-gain'),
+                        costAnalysisCards: DOMUtils.getElement('cost-analysis-cards'),
+                        resetBtn: DOMUtils.getElement('reset-indicators-btn'),
+                        saveBtn: DOMUtils.getElement('save-indicators-btn')
+                    },
+                    // 营养指标表格
+                    nutrition: {
+                        dmiValue: DOMUtils.getElement('dmi-value'),
+                        dmiStandard: DOMUtils.getElement('dmi-standard'),
+                        dmiDiff: DOMUtils.getElement('dmi-diff'),
+                        dmiStatus: DOMUtils.getElement('dmi-status'),
+                        dmPercentValue: DOMUtils.getElement('dm-percent-value'),
+                        dmPercentStandard: DOMUtils.getElement('dm-percent-standard'),
+                        dmPercentDiff: DOMUtils.getElement('dm-percent-diff'),
+                        dmPercentStatus: DOMUtils.getElement('dm-percent-status'),
+                        dmWeightValue: DOMUtils.getElement('dm-weight-value'),
+                        dmWeightStandard: DOMUtils.getElement('dm-weight-standard'),
+                        dmWeightDiff: DOMUtils.getElement('dm-weight-diff'),
+                        dmWeightStatus: DOMUtils.getElement('dm-weight-status'),
+                        tdnValue: DOMUtils.getElement('tdn-value'),
+                        tdnStandard: DOMUtils.getElement('tdn-standard'),
+                        tdnDiff: DOMUtils.getElement('tdn-diff'),
+                        tdnStatus: DOMUtils.getElement('tdn-status'),
+                        meValue: DOMUtils.getElement('me-value'),
+                        meStandard: DOMUtils.getElement('me-standard'),
+                        meDiff: DOMUtils.getElement('me-diff'),
+                        meStatus: DOMUtils.getElement('me-status'),
+                        nemValue: DOMUtils.getElement('nem-value'),
+                        nemStandard: DOMUtils.getElement('nem-standard'),
+                        nemDiff: DOMUtils.getElement('nem-diff'),
+                        nemStatus: DOMUtils.getElement('nem-status'),
+                        negValue: DOMUtils.getElement('neg-value'),
+                        negStandard: DOMUtils.getElement('neg-standard'),
+                        negDiff: DOMUtils.getElement('neg-diff'),
+                        negStatus: DOMUtils.getElement('neg-status'),
+                        availableNegValue: DOMUtils.getElement('available-neg-value'),
+                        availableNegStandard: DOMUtils.getElement('available-neg-standard'),
+                        availableNegDiff: DOMUtils.getElement('available-neg-diff'),
+                        availableNegStatus: DOMUtils.getElement('available-neg-status'),
+                        cpKgValue: DOMUtils.getElement('cp-kg-value'),
+                        cpKgStandard: DOMUtils.getElement('cp-kg-standard'),
+                        cpKgDiff: DOMUtils.getElement('cp-kg-diff'),
+                        cpKgStatus: DOMUtils.getElement('cp-kg-status'),
+                        mpValue: DOMUtils.getElement('mp-value'),
+                        mpStandard: DOMUtils.getElement('mp-standard'),
+                        mpDiff: DOMUtils.getElement('mp-diff'),
+                        mpStatus: DOMUtils.getElement('mp-status'),
+                        roughageRatioValue: DOMUtils.getElement('roughage-ratio-value'),
+                        roughageRatioStandard: DOMUtils.getElement('roughage-ratio-standard'),
+                        roughageRatioDiff: DOMUtils.getElement('roughage-ratio-diff'),
+                        roughageRatioStatus: DOMUtils.getElement('roughage-ratio-status'),
+                        pendfValue: DOMUtils.getElement('pendf-value'),
+                        pendfStandard: DOMUtils.getElement('pendf-standard'),
+                        pendfDiff: DOMUtils.getElement('pendf-diff'),
+                        pendfStatus: DOMUtils.getElement('pendf-status'),
+                        caValue: DOMUtils.getElement('ca-value'),
+                        caStandard: DOMUtils.getElement('ca-standard'),
+                        caDiff: DOMUtils.getElement('ca-diff'),
+                        caStatus: DOMUtils.getElement('ca-status'),
+                        pValue: DOMUtils.getElement('p-value'),
+                        pStandard: DOMUtils.getElement('p-standard'),
+                        pDiff: DOMUtils.getElement('p-diff'),
+                        pStatus: DOMUtils.getElement('p-status'),
+                        rnebValue: DOMUtils.getElement('rneb-value'),
+                        rnebStandard: DOMUtils.getElement('rneb-standard'),
+                        rnebDiff: DOMUtils.getElement('rneb-diff'),
+                        rnebStatus: DOMUtils.getElement('rneb-status'),
+                        udpValue: DOMUtils.getElement('udp-value'),
+                        udpStandard: DOMUtils.getElement('udp-standard'),
+                        udpDiff: DOMUtils.getElement('udp-diff'),
+                        udpStatus: DOMUtils.getElement('udp-status'),
+                        caRatioValue: DOMUtils.getElement('ca-ratio-value'),
+                        caRatioStandard: DOMUtils.getElement('ca-ratio-standard'),
+                        caRatioDiff: DOMUtils.getElement('ca-ratio-diff'),
+                        caRatioStatus: DOMUtils.getElement('ca-ratio-status'),
+                        showFormula: DOMUtils.getElement('show-nutrition-formula'),
+                        formulaInfo: DOMUtils.getElement('nutrition-formula-info')
+                    },
+                    // 浓度差异表格
+                    concentration: {
+                        tdnPercentValue: DOMUtils.getElement('tdn-percent-value'),
+                        tdnPercentStandard: DOMUtils.getElement('tdn-percent-standard'),
+                        tdnPercentDiff: DOMUtils.getElement('tdn-percent-diff'),
+                        mePerUnitValue: DOMUtils.getElement('me-per-unit-value'),
+                        mePerUnitStandard: DOMUtils.getElement('me-per-unit-standard'),
+                        mePerUnitDiff: DOMUtils.getElement('me-per-unit-diff'),
+                        nemPerUnitValue: DOMUtils.getElement('nem-per-unit-value'),
+                        nemPerUnitStandard: DOMUtils.getElement('nem-per-unit-standard'),
+                        nemPerUnitDiff: DOMUtils.getElement('nem-per-unit-diff'),
+                        negPerUnitValue: DOMUtils.getElement('neg-per-unit-value'),
+                        negPerUnitStandard: DOMUtils.getElement('neg-per-unit-standard'),
+                        negPerUnitDiff: DOMUtils.getElement('neg-per-unit-diff'),
+                        cpPercentValue: DOMUtils.getElement('cp-percent-value'),
+                        cpPercentStandard: DOMUtils.getElement('cp-percent-standard'),
+                        cpPercentDiff: DOMUtils.getElement('cp-percent-diff'),
+                        starchPercentValue: DOMUtils.getElement('starch-percent-value'),
+                        starchPercentStandard: DOMUtils.getElement('starch-percent-standard'),
+                        starchPercentDiff: DOMUtils.getElement('starch-percent-diff')
+                    },
+                    // 原料详情模态框
+                    modal: {
+                        feedDetail: DOMUtils.getElement('feed-detail-modal'),
+                        feedName: DOMUtils.getElement('modal-feed-name'),
+                        feedCategory: DOMUtils.getElement('modal-feed-category'),
+                        nutritionTable: DOMUtils.getElement('modal-nutrition-table'),
+                        addFeed: DOMUtils.getElement('add-feed-from-modal'),
+                        close: DOMUtils.getElement('close-modal'),
+                        ingredientEdit: DOMUtils.getElement('ingredient-edit-modal'),
+                        closeEdit: DOMUtils.getElement('close-edit-modal')
+                    },
+                    // 成本分析
+                    cost: {
+                        feedCost: DOMUtils.getElement('feed-cost-value'),
+                        dailyGain: DOMUtils.getElement('daily-gain-value'),
+                        liveCattlePrice: DOMUtils.getElement('live-cattle-price-value'),
+                        dailyProfit: DOMUtils.getElement('daily-profit-value'),
+                        feedConversion: DOMUtils.getElement('feed-conversion-value'),
+                        costPerKgGain: DOMUtils.getElement('cost-per-kg-gain-value'),
+                        roi: DOMUtils.getElement('roi-value'),
+                        profitCycle: DOMUtils.getElement('profit-cycle-value')
+                    },
+                    // 图表
+                    charts: {
+                        nutritionBar: DOMUtils.getElement('nutrition-bar-chart'),
+                        nutritionRadar: DOMUtils.getElement('nutrition-radar-chart'),
+                        nutritionComparison: DOMUtils.getElement('nutrition-comparison-chart'),
+                        comparison: DOMUtils.getElement('comparison-chart')
+                    },
+                    // 页面
+                    pages: {
+                        formula: DOMUtils.getElement('page-formula'),
+                        management: DOMUtils.getElement('page-management'),
+                        indicators: DOMUtils.getElement('page-indicators'),
+                        ingredients: DOMUtils.getElement('page-ingredients'),
+                        about: DOMUtils.getElement('page-about'),
+                        profit: DOMUtils.getElement('page-profit')
+                    },
+                    // 导航
+                    nav: {
+                        formula: DOMUtils.getElement('nav-formula'),
+                        management: DOMUtils.getElement('nav-management'),
+                        indicators: DOMUtils.getElement('nav-indicators'),
+                        ingredients: DOMUtils.getElement('nav-ingredients'),
+                        profit: DOMUtils.getElement('nav-profit'),
+                        about: DOMUtils.getElement('nav-about'),
+                        mobileMenuButton: DOMUtils.getElement('mobile-menu-button'),
+                        mobileMenu: DOMUtils.getElement('mobile-menu'),
+                        mobileNavFormula: DOMUtils.getElement('mobile-nav-formula'),
+                        mobileNavManagement: DOMUtils.getElement('mobile-nav-management'),
+                        mobileNavIndicators: DOMUtils.getElement('mobile-nav-indicators'),
+                        mobileNavIngredients: DOMUtils.getElement('mobile-nav-ingredients'),
+                        mobileNavProfit: DOMUtils.getElement('mobile-nav-profit'),
+                        mobileNavAbout: DOMUtils.getElement('mobile-nav-about')
+                    },
+                    // 配方管理
+                    management: {
+                        compareFormulas: DOMUtils.getElement('compare-formulas'),
+                        deleteSelectedFormulas: DOMUtils.getElement('delete-selected-formulas')
+                    },
+                    // 原料管理
+                    ingredients: {
+                        addButton: DOMUtils.getElement('add-ingredient-btn'),
+                        saveButton: DOMUtils.getElement('save-ingredient-btn'),
+                        deleteButton: DOMUtils.getElement('delete-ingredient-btn'),
+                        search: DOMUtils.getElement('ingredient-search'),
+                        list: DOMUtils.getElement('ingredients-list')
+                    }
+                };
+                
+                Logger.info('DOM elements initialized', 'initApp');
+                
+                // 初始化备份管理器
+                BackupManager.startBackupSchedule();
+                Logger.info('Backup schedule started', 'initApp');
+                
                 // 从本地存储加载原料数据
-                loadIngredientsFromLocalStorage();
+                try {
+                    loadIngredientsFromLocalStorage();
+                    Logger.info('Ingredients loaded from localStorage', 'initApp');
+                } catch (error) {
+                    ErrorHandler.handleError(error, 'loadIngredientsFromLocalStorage');
+                    Logger.warn('Failed to load ingredients, using default data', 'initApp');
+                }
                 
                 // 初始化原料列表
-                initFeedList();
+                try {
+                    initFeedList();
+                    Logger.info('Feed list initialized', 'initApp');
+                } catch (error) {
+                    ErrorHandler.handleError(error, 'initFeedList');
+                }
                 
                 // 初始化移动端菜单
-                initMobileMenu();
+                try {
+                    initMobileMenu();
+                    Logger.info('Mobile menu initialized', 'initApp');
+                } catch (error) {
+                    ErrorHandler.handleError(error, 'initMobileMenu');
+                }
                 
                 // 初始化事件监听器
-                initEventListeners();
+                try {
+                    initEventListeners();
+                    Logger.info('Event listeners initialized', 'initApp');
+                } catch (error) {
+                    ErrorHandler.handleError(error, 'initEventListeners');
+                }
                 
                 // 初始化图表交互修复
-                initChartInteractions();
+                try {
+                    initChartInteractions();
+                    Logger.info('Chart interactions initialized', 'initApp');
+                } catch (error) {
+                    ErrorHandler.handleError(error, 'initChartInteractions');
+                }
                 
-                // 从本地存储加载数据（添加错误处理）
+                // 从本地存储加载数据
                 try {
                     loadSavedFormulas();
                     loadCurrentFormula();
+                    Logger.info('Formula data loaded', 'initApp');
                 } catch (error) {
-                    console.error('从本地存储加载数据失败:', error);
+                    ErrorHandler.handleError(error, 'loadFormulaData');
                     // 重置数据以确保应用能正常启动
                     resetAppData();
-                    showToast('加载数据失败，已重置为默认状态', 'warning');
+                    ErrorHandler.showToast('加载数据失败，已重置为默认状态', 'warning');
                 }
                 
                 // 默认显示配方制作页面
-                switchPage('formula');
-                
-                // 更新精料配方选择器
-                updateConcentrateSelector();
-                
-                // 初始化自动备份
-                initAutoBackup();
-                
-                // 初始化存储监控
-                initStorageMonitoring();
-                
-                // 执行存储健康检查
-                const healthStatus = storageHealthCheck();
-                if (healthStatus.warnings.length > 0) {
-                    showToast(`存储健康检查发现 ${healthStatus.warnings.length} 个问题，请查看控制台详细信息`, healthStatus.warnings.length >= 3 ? 'danger' : 'warning');
+                try {
+                    switchPage('formula');
+                    Logger.info('Default page set to formula', 'initApp');
+                } catch (error) {
+                    ErrorHandler.handleError(error, 'switchPage');
                 }
                 
-                // 显示存储空间使用情况
-                showStorageUsage();
+                // 更新精料配方选择器
+                try {
+                    updateConcentrateSelector();
+                    Logger.info('Concentrate selector updated', 'initApp');
+                } catch (error) {
+                    ErrorHandler.handleError(error, 'updateConcentrateSelector');
+                }
                 
                 // 初始化图表
-                console.log('Initializing charts...');
-                updateNutritionCharts();
+                try {
+                    Logger.info('Initializing charts...', 'initApp');
+                    updateNutritionCharts();
+                    Logger.info('Charts initialized', 'initApp');
+                } catch (error) {
+                    ErrorHandler.handleError(error, 'updateNutritionCharts');
+                }
+                
+                Logger.info('Application initialization completed successfully', 'initApp');
+                ErrorHandler.showToast('系统初始化成功', 'success');
             } catch (error) {
-                console.error('初始化应用失败:', error);
-                showToast('应用初始化失败，请刷新页面重试', 'error');
+                ErrorHandler.handleError(error, 'initApp');
+                ErrorHandler.showToast('应用初始化失败，请刷新页面重试', 'error');
             }
         }
         
@@ -13934,11 +14366,26 @@ function renderIndicatorPreview(indicators) {
         }
 
         // 页面加载完成后初始化应用
-        // 从外部文件加载应用初始化代码
-        const script = document.createElement('script');
-        script.src = 'assets/js/app.js';
-        script.defer = true;
-        document.head.appendChild(script);
+        window.addEventListener('load', function() {
+            // 等待Chart.js加载完成后再初始化
+            function initializeWhenChartReady() {
+                if (typeof Chart !== 'undefined') {
+                    console.log('Chart.js is ready, initializing app...');
+                    initApp();
+                    // 确保配方页面可见后再初始化图表和营养指标
+                    setTimeout(function() {
+                        console.log('Initializing charts and nutrition data after app init...');
+                        updateNutritionTable();
+                        updateNutritionCharts();
+                    }, 500);
+                } else {
+                    console.log('Waiting for Chart.js to load...');
+                    setTimeout(initializeWhenChartReady, 100);
+                }
+            }
+            
+            initializeWhenChartReady();
+        });
         
         // 额外的图表初始化函数
         function initCharts() {
@@ -14077,39 +14524,6 @@ function renderIndicatorPreview(indicators) {
                 console.error('Chart initialization error:', error);
             }
         }
-
-        // 注册Service Worker（PWA支持）
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('service-worker.js')
-                    .then(function(registration) {
-                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    })
-                    .catch(function(error) {
-                        console.log('ServiceWorker registration failed: ', error);
-                    });
-            });
-        }
-
-        // Google Analytics
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'UA-XXXXXXXXX-X'); // 请替换为您的Google Analytics跟踪ID
-
-        // Sentry错误监控
-        if (typeof Sentry !== 'undefined') {
-            Sentry.init({
-                dsn: 'https://your-sentry-dsn@sentry.io/1234567', // 请替换为您的Sentry DSN
-                integrations: [new Sentry.BrowserTracing()],
-                tracesSampleRate: 1.0
-            });
-        }
     </script>
-    <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-XXXXXXXXX-X"></script> <!-- 请替换为您的Google Analytics跟踪ID -->
-    
-    <!-- Sentry错误监控 -->
-    <script src="https://browser.sentry-cdn.com/7.0.0/bundle.min.js"></script>
 </body>
 </html>
