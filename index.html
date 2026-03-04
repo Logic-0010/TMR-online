@@ -479,7 +479,7 @@
                 <!-- 原料搜索 -->
                 <div class="mb-5">
                     <div class="relative">
-                        <input type="text" id="feed-search" placeholder="搜索原料..." class="input-field pl-12 pr-4 py-3">
+                        <input type="text" id="feed-search" name="feed-search" placeholder="搜索原料..." class="input-field pl-12 pr-4 py-3">
                         <i class="fa fa-search absolute left-4 top-3.5 text-gray-400 transition-all duration-300"></i>
                     </div>
                 </div>
@@ -519,7 +519,7 @@
                         </select>
                         <div id="custom-weight-container" class="hidden flex-1">
                             <div class="relative">
-                                <input type="number" id="custom-weight" min="200" max="700" step="10" placeholder="输入体重..." class="input-field pl-10 py-3">
+                                <input type="number" id="custom-weight" name="custom-weight" min="200" max="700" step="10" placeholder="输入体重..." class="input-field pl-10 py-3">
                                 <span class="absolute left-4 top-3 text-gray-500">kg</span>
                             </div>
                         </div>
@@ -531,11 +531,11 @@
                     <label class="label-field">配方类型</label>
                     <div class="flex space-x-6">
                         <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="radio" name="formula-type" value="tmr" checked class="radio-field">
+                            <input type="radio" id="formula-type-tmr" name="formula-type" value="tmr" checked class="radio-field">
                             <span>TMR日粮配方</span>
                         </label>
                         <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="radio" name="formula-type" value="concentrate" class="radio-field">
+                            <input type="radio" id="formula-type-concentrate" name="formula-type" value="concentrate" class="radio-field">
                             <span>精料配方</span>
                         </label>
                     </div>
@@ -559,7 +559,7 @@
                 <!-- 配方名称 -->
                 <div class="mb-5">
                     <label for="formula-name" class="label-field">配方名称</label>
-                    <input type="text" id="formula-name" placeholder="输入配方名称..." class="input-field py-3">
+                    <input type="text" id="formula-name" name="formula-name" placeholder="输入配方名称..." class="input-field py-3">
                 </div>
                 
                 <!-- TMR日粮配方设置 -->
@@ -568,7 +568,7 @@
                     <div class="mb-5">
                         <label for="total-weight" class="label-field">配方总重量</label>
                         <div class="relative">
-                            <input type="number" id="total-weight" min="0" step="0.01" value="0" placeholder="输入总重量..." class="input-field pr-16 py-3">
+                            <input type="number" id="total-weight" name="total-weight" min="0" step="0.01" value="0" placeholder="输入总重量..." class="input-field pr-16 py-3">
                             <span class="absolute right-4 top-3 text-gray-500 font-medium">kg</span>
                         </div>
                         <p class="text-xs text-gray-500 mt-1">用于计算每种原料的实际用量</p>
@@ -597,7 +597,7 @@
                     <div class="mb-5">
                         <label for="concentrate-total" class="label-field">精料总添加量</label>
                         <div class="relative">
-                            <input type="number" id="concentrate-total" min="0" max="1000" step="1" value="0" placeholder="输入总添加量..." class="input-field pr-16 py-3">
+                            <input type="number" id="concentrate-total" name="concentrate-total" min="0" max="1000" step="1" value="0" placeholder="输入总添加量..." class="input-field pr-16 py-3">
                             <span class="absolute right-4 top-3 text-gray-500 font-medium">kg</span>
                         </div>
                         <div class="mt-1">
@@ -1053,7 +1053,7 @@
                     <div class="flex flex-wrap gap-4 mb-4">
                         <div class="flex-1 min-w-[200px]">
                             <div class="relative">
-                                <input type="text" id="formula-search" placeholder="搜索配方名称..." class="input-field pl-10">
+                                <input type="text" id="formula-search" name="formula-search" placeholder="搜索配方名称..." class="input-field pl-10">
                                 <i class="fa fa-search absolute left-3 top-3 text-gray-400"></i>
                             </div>
                         </div>
@@ -1132,12 +1132,12 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label for="live-cattle-price" class="label-field">活牛价格 (元/kg)</label>
-                        <input type="number" id="live-cattle-price" min="0" max="20" step="0.1" value="0" class="input-field">
+                        <input type="number" id="live-cattle-price" name="live-cattle-price" min="0" max="20" step="0.1" value="0" class="input-field">
                         <p class="text-xs text-gray-500 mt-1">可手动调整活牛价格</p>
                     </div>
                     <div>
                         <label for="target-daily-gain" class="label-field">目标日增重 (kg/d)</label>
-                        <input type="number" id="target-daily-gain" min="0" max="3" step="0.1" value="0" class="input-field">
+                        <input type="number" id="target-daily-gain" name="target-daily-gain" min="0" max="3" step="0.1" value="0" class="input-field">
                         <p class="text-xs text-gray-500 mt-1">根据配方营养指标自动计算</p>
                     </div>
                 </div>
@@ -1273,27 +1273,27 @@
                         
                         <div>
                             <label for="cattle-weight" class="label-field required">肉牛体重 (kg)</label>
-                            <input type="number" id="cattle-weight" min="0" max="700" step="10" value="0" class="input-field">
+                            <input type="number" id="cattle-weight" name="cattle-weight" min="0" max="700" step="10" value="0" class="input-field">
                         </div>
                         
                         <div>
                             <label for="daily-gain-profit" class="label-field required">日增重 (kg/d)</label>
-                            <input type="number" id="daily-gain-profit" min="0" max="3" step="0.1" value="0" class="input-field">
+                            <input type="number" id="daily-gain-profit" name="daily-gain-profit" min="0" max="3" step="0.1" value="0" class="input-field">
                         </div>
                         
                         <div>
                             <label for="feeding-days" class="label-field required">饲养天数 (天)</label>
-                            <input type="number" id="feeding-days" min="0" max="365" step="1" value="0" class="input-field">
+                            <input type="number" id="feeding-days" name="feeding-days" min="0" max="365" step="1" value="0" class="input-field">
                         </div>
                         
                         <div>
                             <label for="cattle-price" class="label-field required">活牛价格 (元/kg)</label>
-                            <input type="number" id="cattle-price" min="0" max="30" step="0.1" value="0" class="input-field">
+                            <input type="number" id="cattle-price" name="cattle-price" min="0" max="30" step="0.1" value="0" class="input-field">
                         </div>
                         
                         <div>
                             <label for="purchase-price" class="label-field required">牛只购买价格 (元/头)</label>
-                            <input type="number" id="purchase-price" min="0" max="20000" step="100" value="0" class="input-field">
+                            <input type="number" id="purchase-price" name="purchase-price" min="0" max="20000" step="100" value="0" class="input-field">
                         </div>
                     </div>
                     
@@ -1303,22 +1303,22 @@
                         
                         <div>
                             <label for="feed-cost" class="label-field required">饲料成本 (元/头/天)</label>
-                            <input type="number" id="feed-cost" min="0" max="100" step="0.1" value="0" class="input-field">
+                            <input type="number" id="feed-cost" name="feed-cost" min="0" max="100" step="0.1" value="0" class="input-field">
                         </div>
                         
                         <div>
                             <label for="mortality-rate" class="label-field required">死亡率 (%)</label>
-                            <input type="number" id="mortality-rate" min="0" max="10" step="0.1" value="0" class="input-field">
+                            <input type="number" id="mortality-rate" name="mortality-rate" min="0" max="10" step="0.1" value="0" class="input-field">
                         </div>
                         
                         <div>
                             <label for="fixed-cost" class="label-field required">固定成本 (元/头/天)</label>
-                            <input type="number" id="fixed-cost" min="0" max="50" step="0.1" value="0" class="input-field">
+                            <input type="number" id="fixed-cost" name="fixed-cost" min="0" max="50" step="0.1" value="0" class="input-field">
                         </div>
                         
                         <div>
                             <label for="capital-cost" class="label-field required">资金成本 (元/头/天)</label>
-                            <input type="number" id="capital-cost" min="0" max="20" step="0.1" value="0" class="input-field">
+                            <input type="number" id="capital-cost" name="capital-cost" min="0" max="20" step="0.1" value="0" class="input-field">
                         </div>
                     </div>
                 </div>
@@ -1457,7 +1457,7 @@
                         </button>
                     </div>
                     <div class="relative">
-                        <input type="text" id="ingredient-search" placeholder="搜索原料..." class="input-field pl-10">
+                        <input type="text" id="ingredient-search" name="ingredient-search" placeholder="搜索原料..." class="input-field pl-10">
                         <i class="fa fa-search absolute left-3 top-3 text-gray-400"></i>
                     </div>
                 </div>
@@ -1545,13 +1545,13 @@
             </div>
             <div class="p-4 max-h-[80vh] overflow-y-auto">
                 <form id="ingredient-form">
-                    <input type="hidden" id="ingredient-id">
+                    <input type="hidden" id="ingredient-id" name="ingredient-id">
                     
                     <!-- 基本信息 -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div>
                             <label for="ingredient-name" class="label-field">原料名称</label>
-                            <input type="text" id="ingredient-name" class="input-field" required>
+                            <input type="text" id="ingredient-name" name="ingredient-name" class="input-field" required>
                         </div>
                         <div>
                             <label for="ingredient-category" class="label-field">原料分类</label>
@@ -1569,7 +1569,7 @@
                         </div>
                         <div>
                             <label for="ingredient-price" class="label-field">价格 (元/kg)</label>
-                            <input type="number" id="ingredient-price" min="0" step="0.01" class="input-field" required>
+                            <input type="number" id="ingredient-price" name="ingredient-price" min="0" step="0.01" class="input-field" required>
                         </div>
                     </div>
                     
@@ -1578,59 +1578,59 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                         <div>
                             <label for="nutrient-dm" class="label-field">干物质 (DM, %)</label>
-                            <input type="number" id="nutrient-dm" min="0" max="100" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-dm" name="nutrient-dm" min="0" max="100" step="0.01" class="input-field">
                         </div>
                         <div>
                             <label for="nutrient-cp" class="label-field">粗蛋白 (CP, %DM)</label>
-                            <input type="number" id="nutrient-cp" min="0" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-cp" name="nutrient-cp" min="0" step="0.01" class="input-field">
                         </div>
                         <div>
                             <label for="nutrient-starch" class="label-field">淀粉 (Starch, %DM)</label>
-                            <input type="number" id="nutrient-starch" min="0" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-starch" name="nutrient-starch" min="0" step="0.01" class="input-field">
                         </div>
                         <div>
                             <label for="nutrient-ee" class="label-field">脂肪 (EE, %DM)</label>
-                            <input type="number" id="nutrient-ee" min="0" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-ee" name="nutrient-ee" min="0" step="0.01" class="input-field">
                         </div>
                         <div>
                             <label for="nutrient-ndf" class="label-field">中性洗涤纤维 (NDF, %DM)</label>
-                            <input type="number" id="nutrient-ndf" min="0" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-ndf" name="nutrient-ndf" min="0" step="0.01" class="input-field">
                         </div>
                         <div>
                             <label for="nutrient-adf" class="label-field">酸性洗涤纤维 (ADF, %DM)</label>
-                            <input type="number" id="nutrient-adf" min="0" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-adf" name="nutrient-adf" min="0" step="0.01" class="input-field">
                         </div>
                         <div>
                             <label for="nutrient-ca" class="label-field">钙 (Ca, %DM)</label>
-                            <input type="number" id="nutrient-ca" min="0" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-ca" name="nutrient-ca" min="0" step="0.01" class="input-field">
                         </div>
                         <div>
                             <label for="nutrient-p" class="label-field">磷 (P, %DM)</label>
-                            <input type="number" id="nutrient-p" min="0" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-p" name="nutrient-p" min="0" step="0.01" class="input-field">
                         </div>
                         <div>
                             <label for="nutrient-neg" class="label-field">增重净能 (NEg, MJ/kg)</label>
-                            <input type="number" id="nutrient-neg" min="0" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-neg" name="nutrient-neg" min="0" step="0.01" class="input-field">
                         </div>
                         <div>
                             <label for="nutrient-tdn" class="label-field">总可消化养分 (TDN, %DM)</label>
-                            <input type="number" id="nutrient-tdn" min="0" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-tdn" name="nutrient-tdn" min="0" step="0.01" class="input-field">
                         </div>
                         <div>
                             <label for="nutrient-rdp" class="label-field">瘤胃可降解蛋白 (RDP, %CP)</label>
-                            <input type="number" id="nutrient-rdp" min="0" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-rdp" name="nutrient-rdp" min="0" step="0.01" class="input-field">
                         </div>
                         <div>
                             <label for="nutrient-me" class="label-field">代谢能 (ME, Mcal/kgDM)</label>
-                            <input type="number" id="nutrient-me" min="0" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-me" name="nutrient-me" min="0" step="0.01" class="input-field">
                         </div>
                         <div>
                             <label for="nutrient-nem" class="label-field">维持净能 (NEm, Mcal/kgDM)</label>
-                            <input type="number" id="nutrient-nem" min="0" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-nem" name="nutrient-nem" min="0" step="0.01" class="input-field">
                         </div>
                         <div>
                             <label for="nutrient-pendf" class="label-field">有效中性洗涤纤维 (PeNDF, %DM)</label>
-                            <input type="number" id="nutrient-pendf" min="0" step="0.01" class="input-field">
+                            <input type="number" id="nutrient-pendf" name="nutrient-pendf" min="0" step="0.01" class="input-field">
                         </div>
                     </div>
                 </form>
@@ -10978,7 +10978,7 @@
                 <div class="flex justify-between items-start mb-2">
                     <h3 class="font-semibold text-lg truncate">${formula.name}</h3>
                     <div class="flex items-center space-x-1">
-                        <input type="checkbox" class="formula-checkbox mr-2" data-id="${formula.id}">
+                        <input type="checkbox" id="formula-checkbox-${formula.id}" class="formula-checkbox mr-2" data-id="${formula.id}" name="formula-checkbox">
                         <button class="text-blue-500 hover:text-blue-700 copy-formula" data-id="${formula.id}" title="复制配方">
                             <i class="fa fa-copy"></i>
                         </button>
@@ -12252,23 +12252,23 @@
                             <p class="mb-4 text-gray-600">选择要清理的数据类型：</p>
                             <div class="space-y-2">
                                 <label class="flex items-center">
-                                    <input type="checkbox" id="cleanup-old-formulas" class="mr-2">
+                                    <input type="checkbox" id="cleanup-old-formulas" name="cleanup-old-formulas" class="mr-2">
                                     <span>清理旧配方（保留最近5个）</span>
                                 </label>
                                 <label class="flex items-center">
-                                    <input type="checkbox" id="cleanup-backups" class="mr-2">
+                                    <input type="checkbox" id="cleanup-backups" name="cleanup-backups" class="mr-2">
                                     <span>清理备份数据</span>
                                 </label>
                                 <label class="flex items-center">
-                                    <input type="checkbox" id="cleanup-temp" class="mr-2" checked>
+                                    <input type="checkbox" id="cleanup-temp" name="cleanup-temp" class="mr-2" checked>
                                     <span>清理临时数据</span>
                                 </label>
                                 <label class="flex items-center">
-                                    <input type="checkbox" id="cleanup-current-formula" class="mr-2">
+                                    <input type="checkbox" id="cleanup-current-formula" name="cleanup-current-formula" class="mr-2">
                                     <span>清理当前配方</span>
                                 </label>
                                 <label class="flex items-center">
-                                    <input type="checkbox" id="cleanup-all" class="mr-2">
+                                    <input type="checkbox" id="cleanup-all" name="cleanup-all" class="mr-2">
                                     <span>清理所有数据（重置系统）</span>
                                 </label>
                             </div>
