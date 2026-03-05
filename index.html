@@ -6283,7 +6283,7 @@
                 name: feed.name,
                 category: feed.category,
                 categoryName: feed.categoryName,
-                weight: formulaType === 'tmr' ? 1 : 0, // TMR配方默认添加1kg，精料配方默认0kg
+                weight: formulaType === 'tmr' ? (feed.nutrients.usage || 1) : 0, // TMR配方使用原料的建议用量，精料配方默认0kg
                 price: feed.price,
                 nutrients: { ...feed.nutrients }
             };
@@ -7061,12 +7061,35 @@
                     rdpCPRatio: 0 // RDP/CP比例
                 };
                 
-                // 计算加权平均（使用更高精度的计算）
+                // 计算总干物质重量
+                let totalDryMatterWeight = 0;
                 currentFormula.ingredients.forEach(ingredient => {
-                    const ratio = ingredient.weight / totalWeight;
-                    
-                    // 干物质含量
-                    nutrients.dm += ingredient.nutrients.dm * ratio;
+                    const dryMatterWeight = ingredient.weight * (ingredient.nutrients.dm / 100);
+                    totalDryMatterWeight += dryMatterWeight;
+                });
+                Logger.debug(`Total dry matter weight: ${totalDryMatterWeight}`, 'calculateFormulaNutrients');
+                
+                // 初始化营养成分总量（基于干物质）
+                const nutrientTotals = {
+                    tdn: 0,
+                    cp: 0,
+                    rdp: 0,
+                    udp: 0,
+                    me: 0,
+                    nem: 0,
+                    neg: 0,
+                    starch: 0,
+                    ee: 0,
+                    ndf: 0,
+                    adf: 0,
+                    pendf: 0,
+                    ca: 0,
+                    p: 0
+                };
+                
+                // 计算每个原料的营养成分总量
+                currentFormula.ingredients.forEach(ingredient => {
+                    const dryMatterWeight = ingredient.weight * (ingredient.nutrients.dm / 100);
                     
                     // 计算TDN，如果原料没有提供TDN值，则根据其他营养成分计算
                     // 基于BCNRM模型的TDN计算方法，使用更准确的系数
@@ -7076,44 +7099,84 @@
                          ingredient.nutrients.starch * 0.98 + // 淀粉消化率调整（BCNRM标准）
                          (ingredient.nutrients.ndf - ingredient.nutrients.adf) * 0.5 + // 半纤维素消化率调整（BCNRM标准）
                          ingredient.nutrients.adf * 0.15); // 纤维素消化率调整（BCNRM标准）
-                    nutrients.tdn += ingredientTdn * ratio;
+                    nutrientTotals.tdn += dryMatterWeight * (ingredientTdn / 100);
                     
                     // 粗蛋白
-                    nutrients.cp += ingredient.nutrients.cp * ratio;
+                    nutrientTotals.cp += dryMatterWeight * (ingredient.nutrients.cp / 100);
                     
                     // 计算RDP和UDP，如果原料没有提供RDP值，则使用粗蛋白的65%
                     // 基于BCNRM模型的蛋白质计算方法
                     const ingredientRdp = ingredient.nutrients.rdp || (ingredient.nutrients.cp * 0.65);
-                    nutrients.rdp += ingredientRdp * ratio;
-                    nutrients.udp += (ingredient.nutrients.cp - ingredientRdp) * ratio;
+                    nutrientTotals.rdp += dryMatterWeight * (ingredientRdp / 100);
+                    nutrientTotals.udp += dryMatterWeight * ((ingredient.nutrients.cp - ingredientRdp) / 100);
                     
                     // 计算ME，如果原料没有提供ME值，则根据TDN计算
                     // 基于BCNRM模型的能量计算方法，使用更准确的转换因子
-                    const ingredientMe = ingredient.nutrients.me || (ingredientTdn * 0.044); // BCNRM标准转换因子
-                    nutrients.me += ingredientMe * ratio;
+                    let ingredientMe = ingredient.nutrients.me;
+                    if (!ingredientMe) {
+                        // TDN（%）转换为ME（Mcal/kg）
+                        ingredientMe = ingredientTdn * 0.044; // BCNRM标准转换因子，保持为Mcal/kg
+                    }
+                    nutrientTotals.me += dryMatterWeight * ingredientMe;
                     
                     // 计算NEm和NEg，如果原料没有提供这些值，则根据ME计算
                     // 基于BCNRM模型的能量计算方法，使用更准确的转换因子
-                    const ingredientNem = ingredient.nutrients.nem || (ingredientMe * 0.62); // BCNRM标准转换因子
-                    const ingredientNeg = ingredient.nutrients.neg || (ingredientMe * 0.38); // BCNRM标准转换因子
-                    nutrients.nem += ingredientNem * ratio;
-                    nutrients.neg += ingredientNeg * ratio;
+                    let ingredientNem = ingredient.nutrients.nem;
+                    let ingredientNeg = ingredient.nutrients.neg;
+                    
+                    // 检查并转换单位，确保所有能量值都是Mcal/kg
+                    if (ingredientNem && ingredientNem > 10) { // 如果值大于10，可能是MJ/kg
+                        ingredientNem /= 4.184; // 转换为Mcal/kg
+                    }
+                    if (ingredientNeg && ingredientNeg > 10) { // 如果值大于10，可能是MJ/kg
+                        ingredientNeg /= 4.184; // 转换为Mcal/kg
+                    }
+                    
+                    if (!ingredientNem || !ingredientNeg) {
+                        // ME（Mcal/kg）转换为NEm和NEg（Mcal/kg）
+                        ingredientNem = ingredient.nutrients.nem || (ingredientMe * 0.62);
+                        ingredientNeg = ingredient.nutrients.neg || (ingredientMe * 0.38);
+                    }
+                    nutrientTotals.nem += dryMatterWeight * ingredientNem;
+                    nutrientTotals.neg += dryMatterWeight * ingredientNeg;
                     
                     // 其他营养成分
-                    nutrients.starch += ingredient.nutrients.starch * ratio;
-                    nutrients.ee += ingredient.nutrients.ee * ratio;
-                    nutrients.ndf += ingredient.nutrients.ndf * ratio;
-                    nutrients.adf += ingredient.nutrients.adf * ratio;
+                    nutrientTotals.starch += dryMatterWeight * (ingredient.nutrients.starch / 100);
+                    nutrientTotals.ee += dryMatterWeight * (ingredient.nutrients.ee / 100);
+                    nutrientTotals.ndf += dryMatterWeight * (ingredient.nutrients.ndf / 100);
+                    nutrientTotals.adf += dryMatterWeight * (ingredient.nutrients.adf / 100);
                     
                     // 计算PeNDF，如果原料没有提供PeNDF值，则根据NDF计算
                     // 基于BCNRM模型的有效纤维计算方法
                     const ingredientPendf = ingredient.nutrients.pendf || (ingredient.nutrients.ndf * 0.45); // BCNRM标准系数
-                    nutrients.pendf += ingredientPendf * ratio;
+                    nutrientTotals.pendf += dryMatterWeight * (ingredientPendf / 100);
                     
                     // 矿物质
-                    nutrients.ca += ingredient.nutrients.ca * ratio;
-                    nutrients.p += ingredient.nutrients.p * ratio;
+                    nutrientTotals.ca += dryMatterWeight * (ingredient.nutrients.ca / 100);
+                    nutrientTotals.p += dryMatterWeight * (ingredient.nutrients.p / 100);
                 });
+                
+                // 计算基于干物质的营养指标
+                if (totalDryMatterWeight > 0) {
+                    // 保持高精度计算，最后再四舍五入
+                    nutrients.tdn = (nutrientTotals.tdn / totalDryMatterWeight) * 100;
+                    nutrients.cp = (nutrientTotals.cp / totalDryMatterWeight) * 100;
+                    nutrients.rdp = (nutrientTotals.rdp / totalDryMatterWeight) * 100;
+                    nutrients.udp = (nutrientTotals.udp / totalDryMatterWeight) * 100;
+                    nutrients.me = nutrientTotals.me / totalDryMatterWeight;
+                    nutrients.nem = nutrientTotals.nem / totalDryMatterWeight;
+                    nutrients.neg = nutrientTotals.neg / totalDryMatterWeight;
+                    nutrients.starch = (nutrientTotals.starch / totalDryMatterWeight) * 100;
+                    nutrients.ee = (nutrientTotals.ee / totalDryMatterWeight) * 100;
+                    nutrients.ndf = (nutrientTotals.ndf / totalDryMatterWeight) * 100;
+                    nutrients.adf = (nutrientTotals.adf / totalDryMatterWeight) * 100;
+                    nutrients.pendf = (nutrientTotals.pendf / totalDryMatterWeight) * 100;
+                    nutrients.ca = (nutrientTotals.ca / totalDryMatterWeight) * 100;
+                    nutrients.p = (nutrientTotals.p / totalDryMatterWeight) * 100;
+                }
+                
+                // 干物质含量（基于总重量）
+                nutrients.dm = (totalDryMatterWeight / totalWeight) * 100;
                 
                 // 计算钙磷比
                 // 基于BCNRM模型的钙磷比推荐值（1.5:1-2.5:1）
@@ -7678,15 +7741,15 @@
                                              nutrients.adf * 0.15); // 纤维素消化率调整（BCNRM标准）
                 Logger.debug(`TDN: ${tdn}`, 'calculateNutritionDetails');
                 
-                // 计算代谢能 ME (MJ/d)
+                // 计算代谢能 ME (Mcal/d)
                 // 基于BCNRM模型的能量计算方法，使用更准确的转换因子
-                const me = (tdn * 0.044) * dmi; // BCNRM标准转换因子
+                const me = (tdn * 0.044) * dmi; // BCNRM标准转换因子，保持为Mcal/d
                 
-                // 计算维持净能 NEm (MJ/d) - 基于日粮实际能量含量
+                // 计算维持净能 NEm (Mcal/d) - 基于日粮实际能量含量
                 // 基于BCNRM模型的能量转换方法
                 const nem = me * 0.62; // BCNRM标准转换因子
                 
-                // 计算增重净能 NEg (MJ/d) - 基于日粮实际能量含量
+                // 计算增重净能 NEg (Mcal/d) - 基于日粮实际能量含量
                 // 基于BCNRM模型的能量转换方法
                 const neg = me * 0.38; // BCNRM标准转换因子
                 
